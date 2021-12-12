@@ -26,9 +26,52 @@ Install dotenv globally
 ```bash
 sudo npm i -g dotenv
 ```
+### Node
+```bash
+cd ~
+curl -sL https://deb.nodesource.com/setup_16.x -o nodesource_setup.sh
+sudo bash nodesource_setup.sh
+sudo apt install nodejs
+```
+### Mongo
+```bash
+wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
+echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
+```
+Set up authentication by creating a system user. tmp admin pwd is legotorino. tmp metric
+password is kingpeanutfig
+```javascript
+use admin
+db.createUser({user: "admin",pwd: passwordPrompt(),roles: [{ role: "userAdminAnyDatabase", db: "admin" },{ role: "readWriteAnyDatabase", db: "admin" }]})
+use metric
+db.createUser({user:"metric",pwd:passwordPrompt(),roles:[{role:"readWrite",db:"metric"}]})
 
+db.auth("myUserAdmin", passwordPrompt())
+db.createUser({user:"metric",pwd:passwordPrompt(),roles:[{role:"readWrite",db:"metric"}]})
+```
+Edit /etc/mongod.conf to set `security: authorization enabled`, and to add the servers
+address to `net: bindIp`
 
-** NOTES
+> Note: I named the machine "metric" in /etc/hostname so the setting for bindIp can be
+> `bindIp: localhost,metric`
+
+## Metric Server
+uses platuml which needs graphviz DOT
+```bash
+sudo apt install default-jre
+sudo apt install graphviz
+cd /opt
+sudo chown ubuntu /opt
+mkdir metric
+cd metric
+git clone git@github.com:metric-messenger/server.git
+cd server
+npm i
+```
+
+## NOTES
 ```bash
     4  sudo chown /opt ubuntu
     5  sudo chown ubuntu /opt
