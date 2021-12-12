@@ -20,7 +20,7 @@ server.on('error', function(err) {console.error(err);});
 // on server available, open routes
 server.on('listening', async ()=>{
     let address = server.address();
-    console.log(`Listening on port ${dress.port} profile ${process.env.PROFILE}`);
+    console.log(`Listening on port ${address.port} profile ${process.env.PROFILE}`);
     try {
         // connect public middleware
         app.use(logger('dev'));
