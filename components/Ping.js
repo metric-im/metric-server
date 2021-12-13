@@ -1,5 +1,5 @@
 let Parser = require('./Parser');
-let Id = require('./Id');
+let Id = require('@metric-im/identifier');
 
 /**
  * Record an event. This route is public with a few caveats:

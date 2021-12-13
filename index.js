@@ -5,7 +5,6 @@ let http = require('http');
 let path = require('path');
 let bodyParser = require('body-parser');
 let app = express();
-let Session = require('./components/Session');
 let logger = require('morgan');
 let cors =  require('cors');
 
@@ -31,17 +30,23 @@ server.on('listening', async ()=>{
         app.get('/health', (req, res) => { res.status(200).send() });
 
         // connect to database services
-        let connector = await (require('./components/Connector')).mint(process.env.PROFILE);
+        let connector = await (require('@metric-im/connector')).mint(process.env.PROFILE);
         app.use(connector.attach.bind(connector));
-        // attach account if authorization is provided
-        let account = await (require('./components/Account')).mint(connector);
-        app.use(account.attach.bind(account));
 
-        // set routes for component services
-        for (let name of ['Ping','Link','Search','Schema','Wiki','UML']) {
+        // set routes for open services
+        for (let name of ['Schema','Wiki','UML']) {
             let comp = new (require('./components/'+name))(connector)
             app.use('/'+name.toLowerCase(),comp.routes());
         }
+        // set routes for account services
+        app.use('/a/:id',(req,res,next)=>{
+            req._account = req.params.id;
+            for (let name of ['Ping','Link','Search']) {
+                let comp = new (require('./components/'+name))(connector)
+                app.use('/a/*/'+name.toLowerCase(),comp.routes());
+            }
+            next();
+        });
     } catch(e) {
         console.error(e);
         process.exit();

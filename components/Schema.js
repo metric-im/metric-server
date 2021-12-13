@@ -77,6 +77,7 @@ class Schema {
     async profile(_account) {
         if (!_account) return {};
         let result = await this.connector.db.collection('schemas').findOne({_id:_account});
+        result = result || {}
         let fields = (result.fields||[]).reduce((r,o)=>{r[o.name]={type:o.type};return r},{});
         fields = (result.derivedFields||[]).reduce((r,o)=>{r[o.name]={
             type:o.type,code:o.code,language:o.language

@@ -1,6 +1,5 @@
 let Formatter = require('./Formatter');
 let Parser = require('./Parser');
-let Connector = require('./Connector');
 
 class Data {
     constructor(connector) {

@@ -19,6 +19,9 @@
   },
   "homepage": "https://github.com/metric-messenger/server#readme",
   "dependencies": {
+    "@metric-im/connector": "^1.0.0",
+    "@metric-im/identifier": "^1.0.0",
+    "@metric-im/session": "^1.0.0",
     "bcrypt": "^5.0.1",
     "command-line-args": "^5.2.0",
     "command-line-usage": "^6.1.1",
