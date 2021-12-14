@@ -57,7 +57,7 @@ async function main() {
     if (service.name==="help" || service.name==="?") {
         console.log(commandLineUsage(commandStructure));
     } else if (service.name==="user") {
-        let User = require("@metric-ui/session").User;
+        let User = require("@metric-im/session").User;
         let user = new User(connector);
         let name = prompt('username:');
         let pass = prompt.hide('password:');

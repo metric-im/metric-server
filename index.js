@@ -34,19 +34,19 @@ server.on('listening', async ()=>{
         app.use(connector.attach.bind(connector));
 
         // set routes for open services
-        for (let name of ['Schema','Wiki','UML']) {
+        for (let name of ['Ontology','Wiki','UML']) {
             let comp = new (require('./components/'+name))(connector)
             app.use('/'+name.toLowerCase(),comp.routes());
         }
         // set routes for account services
         app.use('/a/:id',(req,res,next)=>{
             req._account = req.params.id;
-            for (let name of ['Ping','Link','Search']) {
-                let comp = new (require('./components/'+name))(connector)
-                app.use('/a/*/'+name.toLowerCase(),comp.routes());
-            }
             next();
         });
+        for (let name of ['Ping','Link','Search']) {
+            let comp = new (require('./components/'+name))(connector)
+            app.use('/a/*/'+name.toLowerCase(),comp.routes());
+        }
     } catch(e) {
         console.error(e);
         process.exit();

@@ -8,14 +8,13 @@ class Search {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('events');
-        this.schema = new (require('./Schema'))(connector);
+        this.ontology = new (require('./Ontology'))(connector);
     }
 
     routes() {
         let router = require('express').Router();
-        router.all("/:events/:dimensions?/:metrics?", async (req, res) => {
-            let {events,dimensions,metrics} = req.params;
-            if (typeof events === 'string') events = events.split(',');
+        router.all("/:dimensions/:metrics?", async (req, res) => {
+            let {dimensions,metrics} = req.params;
             // parse metrics into name and method. Sum is default if method is not provided
             if (metrics) {
                 if (typeof metrics === 'string') metrics = metrics.split(',');
@@ -25,35 +24,32 @@ class Search {
                 });
             } else metrics = [];
             // parse dimensions
-            let profile = await this.schema.profile(req._account);
-            let dp = new DimPath(profile);
+            let fieldMap = await this.ontology.fieldMap(req._account);
+            let dp = new DimPath(fieldMap);
             dp.parse(dimensions);
 
             let statement = [];
             // build basic match filter
             statement.push({
-                $match: Object.assign({
-                    // _account: req._account,
-                    _event: {$in: events}
-                },
+                $match: Object.assign({},
                 Parser.parseTimeFilter(req.query),
                 Parser.objectify(req.query.where || {})
             )});
             // add derived fields
             let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name));
-            statement.push({$addFields:Object.keys(profile).reduce((r,k)=>{
-                if (profile[k].code && fieldNames.includes(k)) {
+            statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
+                if (fieldMap[k].code && fieldNames.includes(k)) {
                     try {
-                        if (profile[k].language==='json') {
-                            r[k] = Parser.objectify(schema[k].code);
-                        } else if (profile[k].language==='js') {
-                            let inputs = profile[k].code.match(/^function\((.*)\)/);
+                        if (fieldMap[k].language==='json') {
+                            r[k] = Parser.objectify(ontology[k].code);
+                        } else if (fieldMap[k].language==='js') {
+                            let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
                             if (inputs) {
                                 inputs = inputs[1].split(',').reduce((r,a)=>{
                                     if (a) r.push('$'+a);
                                     return r;
                                 },[]);
-                                r[k] = {$function:{body:profile[k].code, args:inputs, lang:"js"}}
+                                r[k] = {$function:{body:fieldMap[k].code, args:inputs, lang:"js"}}
                             }
                         }
                     } catch(e) {
@@ -96,7 +92,7 @@ class Search {
             for (let metric of metrics) {
             }
             if (metrics.length > 0 && results.length > 0) {
-                // results = dp.organize(results);
+                results = dp.organize(results);
                 for (let metric of metrics) {
                     if (metric.method==='ratio') processRatio(metric,results);
                 }

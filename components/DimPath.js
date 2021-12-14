@@ -1,8 +1,8 @@
 const Parser = require("./Parser");
 
 class DimPath {
-    constructor(schema) {
-        this.schema = schema;
+    constructor(fieldMap) {
+        this.fieldMap = fieldMap;
         this.dimensions = [];
         this._ASSIGN = "assign";
         this._COMPRESS = "compress";
@@ -136,7 +136,7 @@ class DimPath {
      * @returns {number|*}
      */
     parseValue(name,val) {
-        let type = this.schema[name].type;
+        let type = this.fieldMap[name].type;
         if (['string','date','bool'].includes(type)) return val;
         else if (['int','long','double','decimal'].includes(type)) return Number(val);
         // else guess
