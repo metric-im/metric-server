@@ -1,6 +1,6 @@
 {
   "name": "metric-messenger",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "ping, link, report",
   "main": "index.js",
   "scripts": {
