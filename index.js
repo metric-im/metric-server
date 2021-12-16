@@ -1,59 +1,24 @@
-'use strict';
-
-let express = require('express');
-let http = require('http');
-let path = require('path');
-let bodyParser = require('body-parser');
-let app = express();
-let logger = require('morgan');
-let cors =  require('cors');
-
-// open cors
-app.use(cors({origin: function(origin, callback){return callback(null, true);},credentials:true}));
-
-// connect web server
-let server = http.createServer(app);
-server.listen(process.env.PORT || "5001");
-server.on('error', function(err) {console.error(err);});
-
-// on server available, open routes
-server.on('listening', async ()=>{
-    let address = server.address();
-    console.log(`Listening on port ${address.port} profile ${process.env.PROFILE}`);
-    try {
-        // connect public middleware
-        app.use(logger('dev'));
-        app.use(bodyParser.json({limit: '50mb'}));
-        app.use(bodyParser.urlencoded({extended: false}));
-        app.use(require('cookie-parser')());
-        app.use(express.static(path.join(__dirname, 'public')));
-        app.get('/health', (req, res) => { res.status(200).send() });
-
-        // connect to database services
-        let connector = await (require('@metric-im/connector')).mint(process.env.PROFILE);
-        app.use(connector.attach.bind(connector));
-
+class EventServer {
+    constructor(connector) {
+        this.connector = connector;
+    }
+    routes() {
+        let router = require('express').Router();
         // set routes for open services
         for (let name of ['Ontology','Wiki','UML']) {
-            let comp = new (require('./components/'+name))(connector)
-            app.use('/'+name.toLowerCase(),comp.routes());
+            let comp = new (require('./components/'+name))(this.connector)
+            router.use('/'+name.toLowerCase(),comp.routes());
         }
         // set routes for account services
-        app.use('/a/:id',(req,res,next)=>{
+        router.use('/a/:id',(req,res,next)=>{
             req._account = req.params.id;
             next();
         });
         for (let name of ['Ping','Link','Search']) {
-            let comp = new (require('./components/'+name))(connector)
-            app.use('/a/*/'+name.toLowerCase(),comp.routes());
+            let comp = new (require('./components/'+name))(this.connector)
+            router.use('/a/*/'+name.toLowerCase(),comp.routes());
         }
-    } catch(e) {
-        console.error(e);
-        process.exit();
+        return router;
     }
-});
-
-process.on('SIGINT', function() {
-    console.log("Shutting down");
-    process.exit();
-});
+}
+module.exports = EventServer
