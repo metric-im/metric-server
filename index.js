@@ -5,7 +5,7 @@ class EventServer {
     routes() {
         let router = require('express').Router();
         // set routes for open services
-        for (let name of ['Ontology','Wiki','UML']) {
+        for (let name of ['Ontology']) {
             let comp = new (require('./components/'+name))(this.connector)
             router.use('/'+name.toLowerCase(),comp.routes());
         }
