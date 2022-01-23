@@ -13,6 +13,10 @@ class Search {
 
     routes() {
         let router = require('express').Router();
+        router.use((req,res,next)=>{
+            if (req.account && req.account.id) next();
+            else res.status(401).send();
+        });
         router.all("/:dimensions/:metrics?", async (req, res) => {
             let {dimensions,metrics} = req.params;
             // parse metrics into name and method. Sum is default if method is not provided

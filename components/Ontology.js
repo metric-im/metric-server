@@ -3,26 +3,57 @@
  * that can be employed by an event. Custom ontologies can be defined
  * to accounts. A common ontology is shared across the system.
  */
+let NameSpace = require('./NameSpace');
 class Ontology {
     constructor(connector) {
         this.connector = connector;
+        this.nameSpace = new NameSpace(connector);
+        this.fieldsCollection = this.connector.db.collection('fields');
+        this.accountsCollection = this.connector.db.collection('accounts');
     }
     routes() {
         let router = require('express').Router();
-        router.get("/populate/:accountId?/:type?",async(req,res)=>{
+        router.use((req,res,next)=>{
+            if (req.account && req.account.id) next();
+            else res.status(401).send();
+        })
+        router.get("/populate",async(req,res)=>{
             try {
-                let result = await this.populate(req.params.accountId,req.params.type);
+                let result = await this.populate(req.account.id,req.params.type);
                 res.json(result);
             } catch(e) {
                 console.error(`Error populating`,e);
                 res.status(500).json({status:'error',message:`Error populating ontology data: ${e.message}`});
             }
         });
+        router.get('/ns',async (req,res)=>{
+            try {
+                res.json(await this.nameSpace.getMine(req.account));
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
+            }
+        });
+        router.put('/ns/:name',async (req,res)=>{
+            try {
+                req.body._id = req.params.name;
+                let ns = await this.nameSpace.put(req.account,req.body);
+                res.json(ns);
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
+            }
+        });
+        router.delete('/ns/:name',async (req,res)=>{
+            try {
+                await this.nameSpace.remove(req.account,req.params.name);
+                res.json({status:'success'});
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error deleting namespace: ${e.message}`});
+            }
+        });
         router.get("/",async(req,res)=>{
             try {
-                let _account = req._account || "common"
-                await this.populate(_account);
-                let result = await this.connector.db.collection('ontology').findOne({_id:_account})
+                let accountId = req.account.id;
+                let result = await this.connector.db.collection('ontology').findOne({_id:accountId});
                 if (result && result.fields) result.fields.sort((a,b)=>{
                     return (a.name === b.name)?0:(a.name > b.name)?1:-1;
                 });
@@ -34,9 +65,8 @@ class Ontology {
         });
         router.put("/",async(req,res)=>{
             try {
-                if (!req.session._account) throw new Error("not authorized");
                 let result = await this.connector.db.collection('ontology').findOneAndUpdate(
-                    {_id:req.session._account},{$set:req.body},{upsert:true}
+                    {_id:req.account.id},{$set:req.body},{upsert:true}
                 );
                 res.json(result);
             } catch(e) {
@@ -47,8 +77,9 @@ class Ontology {
         return router
     }
 
-    async populate(accounts) {
+    async populate(accountId) {
         let query = [
+            {$match:{_account:accountId}},
             {$group:{_id:{account:"$_account",event:"$_event"}}},
             {$lookup:{
                 from:"events",
@@ -70,15 +101,14 @@ class Ontology {
                 events:{$reduce:{input:"$fields",initialValue:[],in:{$setUnion:["$$value","$$this.events"]}}},
                 _modified:new Date()
             }},
-            {$merge:"ontology"}
+            // {$merge:"ontology"}
         ];
-        if (accounts) query.unshift({$match:{_id:{$in:accounts.split(',')}}});
-        await this.connector.db.collection('events').aggregate(query).toArray();
-        return {status:"success",message:"ontology updated"};
+        return await this.connector.db.collection('events').aggregate(query).toArray();
+        // return {status:"success",message:"ontology updated"};
     }
-    async fieldMap(_account) {
-        if (!_account) return {};
-        let result = await this.connector.db.collection('ontology').findOne({_id:_account});
+    async fieldMap(accountId) {
+        if (!accountId) return {};
+        let result = await this.connector.db.collection('ontology').findOne({_id:accountId});
         result = result || {}
         let fields = (result.fields||[]).reduce((r,o)=>{r[o.name]={type:o.type};return r},{});
         fields = (result.derivedFields||[]).reduce((r,o)=>{r[o.name]={

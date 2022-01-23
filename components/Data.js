@@ -1,5 +1,7 @@
 let Formatter = require('./Formatter');
 let Parser = require('./Parser');
+let Identifier = require('@metric-im/identifier');
+
 
 class Data {
     constructor(connector) {
@@ -9,7 +11,7 @@ class Data {
         let router = require('express').Router();
         router.get('/:collection/:item?',async(req,res)=>{
             try {
-                let result = await this.get(req.session.accountId,req.params.collection,req.params.item,req.query);
+                let result = await this.get(req.account.id,req.params.collection,req.params.item,req.query);
                 res.json(result);
             } catch(e) {
                 res.status(e.status||500).json({status:"error",message:e.message});
@@ -17,7 +19,7 @@ class Data {
         });
         router.put('/:collection/:item?',async(req,res)=>{
             try {
-                let result = await this.put(req.session.accountId,req.params.collection,req.body,req.params.item);
+                let result = await this.put(req.account.id,req.params.collection,req.body,req.params.item);
                 res.json(result);
             } catch(e) {
                 res.status(e.status||500).json({status:"error",message:e.message});
@@ -25,7 +27,7 @@ class Data {
         });
         router.delete('/:collection/:item',async(req,res)=>{
             try {
-                await this.remove(req.session.accountId,req.params.collection,req.params.item);
+                await this.remove(req.account.id,req.params.collection,req.params.item);
                 res.status(204).send();
             } catch(e) {
                 res.status(e.status||500).json({status:"error",message:e.message});
@@ -54,10 +56,10 @@ class Data {
      * @returns Object
      */
     async get(accountId,collection,item,options={}) {
-        let selector = {accountId:accountId};
+        let selector = {_account:accountId};
         if (item) selector._id = item;
         if (options.where) Object.assign(selector,Parser.objectify(options.where));
-        let results = await this.connector.dashboard.collection(collection).find(selector).toArray();
+        let results = await this.connector.db.collection(collection).find(selector).toArray();
         return (item?results[0]:results);
     }
 
@@ -71,14 +73,14 @@ class Data {
      */
     async remove(accountId,collection,item) {
         if (!item) throw new Error('no id provided');
-        let selector = {accountId:accountId,_id:item};
-        await this.connector.dashboard.collection(collection).deleteOne(selector);
+        let selector = {_account:accountId,_id:item};
+        await this.connector.db.collection(collection).deleteOne(selector);
     }
 
     /**
      * Put an object (or array of objects) into the specified collection.
      * The request is constructed as an upsert. If no item id is provided,
-     * one is generated using Connector.makeId()
+     * one is generated using Identifier.new.
      *
      * @param accountId enforces writes to the given account.
      * @param collection the name of the collection to collect data from.
@@ -92,18 +94,18 @@ class Data {
             let writes = [];
             for (let o of body) {
                 writes.push({updateOne:{
-                    filter:{_id:(o._id||Connector.makeId()),accountId:accountId},
+                    filter:{_id:(o._id||Identifier.new),_account:(o._account||accountId)},
                     update:constructModifier(o),
                     upsert:true
                 }});
             }
-            let result = await this.connector.dashboard.collection(collection).bulkWrite(writes);
+            let result = await this.connector.db.collection(collection).bulkWrite(writes);
             return {upsertedCount:result.upsertedCount,modifiedCount:result.modifiedCount};
         } else {
-            let selector = {_id:body._id||id||Connector.makeId(),accountId:accountId};
+            let selector = {_id:body._id||id||Identifier.new,_account:accountId};
             let modifier = constructModifier(body);
             let options = {returnNewDocument:true,upsert:true};
-            let result = await this.connector.dashboard.collection(collection).findOneAndUpdate(selector,modifier,options);
+            let result = await this.connector.db.collection(collection).findOneAndUpdate(selector,modifier,options);
             return result.value;
         }
 
