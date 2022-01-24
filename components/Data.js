@@ -2,7 +2,6 @@ let Formatter = require('./Formatter');
 let Parser = require('./Parser');
 let Identifier = require('@metric-im/identifier');
 
-
 class Data {
     constructor(connector) {
         this.connector = connector;

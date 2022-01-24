@@ -28,7 +28,7 @@ class Ontology {
         });
         router.get('/ns/:name?',async (req,res)=>{
             try {
-                res.json(await this.nameSpace.get(req.account,req.params.name));
+                return res.json(await this.nameSpace.get(req.account,req.params.name));
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }
