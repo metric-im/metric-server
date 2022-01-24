@@ -1,49 +1,72 @@
+const Identifier = require("@metric-im/identifier");
+
 /**
  * NameSpace defines a collection event fields for a domain
  * @type {Data}
  */
-let Data = require('./Data');
-
 class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.data = new Data(connector);
+        this.data = new (require('./Data'))(connector);
     }
-    template(account,name) {
+    get template() {
         return {
-            _id:name,
-            _pid:"ROOT",
-            _account:account.id,
-            description:"",
-            availability:"private"
+            ns: (account,name)=>{
+                return {
+                    _id: name,
+                    _pid: "ROOT",
+                    acl:{[account.id]:3},
+                    description: "",
+                    availability: "private"
+                }
+            },
+            field: (ns,name)=>{
+                return {
+                    _id: name,
+                    _ns: ns,
+                    datatype:"string",
+                    description: ""
+                }
+            }
         }
     }
     async remove(account,id) {
+        if (!(await this.test(account,id).owner)) throw new Error("not authorized");
         await this.data.remove(account.id,"namespace",id);
     }
     async put(account,body) {
-        if (!body.created) body = Object.assign(this.template,body);
-        let ns = await this.data.put(account.id,"namespace",body);
-        return ns;
+        if (!body || !body._id) throw new Error('Namespace requires an identifier');
+        let ns = await this.data.get(account.id,"namespace",body._id);
+        if (!ns) ns = Object.assign(this.template.ns(account),body);
+        if (!(await this.test(account,ns).owner)) throw new Error("not authorized");
+        return await this.data.put(account.id,"namespace",body);
     }
-    async getMine(account) {
-        let names = await this.collection.find({_account:account.id}).toArray();
-        // create default namespace for account if not already defined
-        if (!names.find(o=>(o._id===account.id))) {
-            await this.put(account,account.id);
-            names = await this.collection.find({_account:account.id}).toArray();
+    async get(account,id) {
+        let match = {['acl.'+account.id]:{$gt:0}};
+        if (id) match._id = id;
+        let query = [
+            {$match:match},
+            {$lookup:{from:"fields",localField:"_id",foreignField:"_ns",as:"fields"}},
+            {$sort:{_id:1}}
+        ];
+        return await this.collection.aggregate(query).toArray();
+    }
+    async putFields(account,ns,fields=[]) {
+        if (!(await this.test(account,ns).write)) throw new Error("not authorized");
+        if (!Array.isArray(fields)) fields = [fields];
+        fields = fields.map(field=>Object.assign(field,{_ns:ns}));
+        return await this.data.put(account.id,"fields",fields);
+    }
+    async test(account,ns) {
+        if (typeof ns === 'string') ns = await this.collection.findOne({_id:ns});
+        let acl = ns.acl.find(acl=>acl.id===account.id);
+        return {
+            get read() {return acl.value>0},
+            get write() {return acl.value>1},
+            get owner() {return acl.value>2},
         }
-        let accountObj = await this.connector.db.collection('accounts').findOne({_id:account.id});
-        let favs = accountObj.nsFavs||[];
-        // merge and objectify. Owned namespaces overwrite fav namespaces
-        let result = favs.concat(names).reduce((r,o)=>{r[o._id]=o;return r},{});
-        result = Object.keys(result).map(k=>result[k]).sort((a,b)=>{
-            if (a._id > b._id) return 1;
-            else if (a._id < b._id) return -1;
-            else return 0;
-        });
-        return result;
     }
 }
+
 module.exports = NameSpace;

@@ -26,20 +26,22 @@ class Ontology {
                 res.status(500).json({status:'error',message:`Error populating ontology data: ${e.message}`});
             }
         });
-        router.get('/ns',async (req,res)=>{
+        router.get('/ns/:name?',async (req,res)=>{
             try {
-                res.json(await this.nameSpace.getMine(req.account));
+                res.json(await this.nameSpace.get(req.account,req.params.name));
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }
         });
-        router.put('/ns/:name',async (req,res)=>{
+        router.put('/ns/:name/:fields?',async (req,res)=>{
             try {
                 req.body._id = req.params.name;
-                let ns = await this.nameSpace.put(req.account,req.body);
-                res.json(ns);
+                let result = {};
+                if (req.params.fields) result = this.nameSpace.putFields(account,req.params.name,req.params.fields);
+                else result = await this.nameSpace.put(req.account,req.body);
+                res.json(result);
             } catch(e) {
-                res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
+                res.status(500).json({status:'error',message:`Error putting to namespace: ${e.message}`});
             }
         });
         router.delete('/ns/:name',async (req,res)=>{
@@ -48,30 +50,6 @@ class Ontology {
                 res.json({status:'success'});
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error deleting namespace: ${e.message}`});
-            }
-        });
-        router.get("/",async(req,res)=>{
-            try {
-                let accountId = req.account.id;
-                let result = await this.connector.db.collection('ontology').findOne({_id:accountId});
-                if (result && result.fields) result.fields.sort((a,b)=>{
-                    return (a.name === b.name)?0:(a.name > b.name)?1:-1;
-                });
-                res.json(result);
-            } catch(e) {
-                console.error(`Error getting ontology`,e);
-                res.status(500).json({status:'error',message:`Error getting ontology data: ${e.message}`});
-            }
-        });
-        router.put("/",async(req,res)=>{
-            try {
-                let result = await this.connector.db.collection('ontology').findOneAndUpdate(
-                    {_id:req.account.id},{$set:req.body},{upsert:true}
-                );
-                res.json(result);
-            } catch(e) {
-                console.error(`Error putting ontology data`,e);
-                res.status(500).json({status:'error',message:`Error putting ontology data: ${e.message}`});
             }
         });
         return router
