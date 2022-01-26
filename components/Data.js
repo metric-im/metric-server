@@ -6,6 +6,16 @@ class Data {
     constructor(connector) {
         this.connector = connector;
     }
+    get acl() {
+        return {
+            accounts:{get:1,put:2,del:3},
+            users:{get:1,put:2,del:3},
+            namespace:{get:1,put:2,del:2},
+            fields:{bound:{collection:'namespace',field:'_ns'},get:1,put:2,del:2},
+            query:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2},
+            wall:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2}
+        }
+    }
     routes() {
         let router = require('express').Router();
         router.get('/:collection/:item?',async(req,res)=>{
@@ -118,6 +128,14 @@ class Data {
             modifier.$setOnInsert = {_created:new Date()};
             if (!doc._createdBy) modifier.$setOnInsert._createdBy = "unknown";
             return modifier;
+        }
+    }
+    test(collection) {
+
+        return {
+            get:()=>{
+                this.acl.get
+            }
         }
     }
 }

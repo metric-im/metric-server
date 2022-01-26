@@ -38,14 +38,15 @@ class NameSpace {
     async put(account,body) {
         if (!body || !body._id) throw new Error('Namespace requires an identifier');
         let ns = await this.collection.findOne({_id:body._id});
+        if (!account.acl.namespace || !account.acl.namespace.find(a=>ns._id) throw new Error('Not Authorized');
         if (!ns) ns = Object.assign(this.template.ns(account),body);
         if (!(await this.test.owner(account,ns))) throw new Error("not authorized");
         delete ns.fields; // use putFields
         return await this.data.put(account.id,"namespace",body);
     }
     async get(account,id) {
-        let match = {['acl.'+account.id]:{$gt:0}};
-        if (id) match._ns = id;
+        let match = {$or:[{available:0},{_id:{$in:account.acl.namespace||[]}}]}
+        if (id) match._id = id;
         let query = [
             {$match:match},
             {$lookup:{from:"fields",localField:"_id",foreignField:"_ns",as:"fields"}},
