@@ -8,6 +8,7 @@ class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
+        this.collection = this.connector.db.collection('namespace');
         this.data = new (require('./Data'))(connector);
     }
     get template() {
@@ -37,39 +38,39 @@ class NameSpace {
     }
     async put(account,body) {
         if (!body || !body._id) throw new Error('Namespace requires an identifier');
+        let acl = await this.connector.get()
+        if (!(await this.connector.test.owner(
+            {accounts:account.id},{namespace:body._id}
+        ))) throw new Error("not authorized");
+
         let ns = await this.collection.findOne({_id:body._id});
-        if (!account.acl.namespace || !account.acl.namespace.find(a=>ns._id) throw new Error('Not Authorized');
         if (!ns) ns = Object.assign(this.template.ns(account),body);
-        if (!(await this.test.owner(account,ns))) throw new Error("not authorized");
+        if (!account.acl.namespace || !account.acl.namespace.find(a=>ns._id)) throw new Error('Not Authorized');
         delete ns.fields; // use putFields
         return await this.data.put(account.id,"namespace",body);
     }
     async get(account,id) {
-        let match = {$or:[{available:0},{_id:{$in:account.acl.namespace||[]}}]}
-        if (id) match._id = id;
         let query = [
-            {$match:match},
             {$lookup:{from:"fields",localField:"_id",foreignField:"_ns",as:"fields"}},
             {$sort:{_id:1}}
         ];
-        return await this.collection.aggregate(query).toArray();
+        if (id) {
+            let idExists = await this.connector.test.read({accounts:account.id},{namespace:id});
+            if (idExists) query.unshift({$match:{_id:id}});
+            else return [];
+            let result = await this.collection.aggregate(query).toArray();
+            return result[0];
+        } else {
+            let ids = await this.connector.acl.get.all({accounts:account.id},"namespace");
+            query.unshift({$match:{$or:[{available:0},{_id:{$in:ids}}]}});
+            return await this.collection.aggregate(query).toArray();
+        }
     }
     async putFields(account,ns,fields=[]) {
         if (!(await this.test.write(account,ns))) throw new Error("not authorized");
         if (!Array.isArray(fields)) fields = [fields];
         fields = fields.map(field=>Object.assign(field,{_ns:ns}));
         return await this.data.put(account.id,"fields",fields);
-    }
-    get test() {
-        return {
-            read:async (account,ns)=>{return await base(account,ns) > 0},
-            write:async (account,ns)=>{return await base(account,ns) > 1},
-            owner:async (account,ns)=>{return await base(account,ns) > 2}
-        }
-        async function base(account,ns) {
-            if (typeof ns === 'string') ns = await this.collection.findOne({_id:ns});
-            return ns.acl[account.id];
-        }
     }
 }
 

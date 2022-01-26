@@ -44,13 +44,6 @@ class Data {
         });
         return router;
     }
-    /**
-     * Attach the data instance to the request object for downstream use
-     */
-    attach(req,res,next) {
-        req.data = this;
-        next();
-    }
 
     /**
      * Query collections in the metric database.
