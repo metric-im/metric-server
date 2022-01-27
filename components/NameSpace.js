@@ -62,8 +62,10 @@ class NameSpace {
             return result[0];
         } else {
             let ids = await this.connector.acl.get.all({accounts:account.id},"namespace");
+            ids = ids.map(a=>a.namespace);
             query.unshift({$match:{$or:[{available:0},{_id:{$in:ids}}]}});
-            return await this.collection.aggregate(query).toArray();
+            let result = await this.collection.aggregate(query).toArray();
+            return result;
         }
     }
     async putFields(account,ns,fields=[]) {
