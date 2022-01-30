@@ -8,10 +8,10 @@ class Data {
     }
     get acl() {
         return {
-            accounts:{get:1,put:2,del:3},
-            users:{get:1,put:2,del:3},
+            account:{get:1,put:2,del:3},
+            user:{get:1,put:2,del:3},
             namespace:{get:1,put:2,del:2},
-            fields:{bound:{collection:'namespace',field:'_ns'},get:1,put:2,del:2},
+            field:{bound:{collection:'namespace',field:'_ns'},get:1,put:2,del:2},
             query:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2},
             wall:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2}
         }
@@ -51,14 +51,14 @@ class Data {
      * When an item id is provided the results are provided as a single
      * object. If not, the results are provided in an array.
      *
-     * @param accountId restricts results to the given account.
+     * @param account provides context.
      * @param collection the name of the collection to collect data from.
      * @param item the id (_id) of the item in the collection. (optional)
      * @param options options to limit, sort or format the results
      * @returns Object
      */
-    async get(accountId,collection,item,options={}) {
-        let selector = {_account:accountId};
+    async get(account,collection,item,options={}) {
+        let selector = {_account:account.id};
         if (item) selector._id = item;
         if (options.where) Object.assign(selector,Parser.objectify(options.where));
         let results = await this.connector.db.collection(collection).find(selector).toArray();
@@ -67,15 +67,15 @@ class Data {
 
     /**
      * Remove the identified item from the collection. Item must belong to the
-     * give accountId
+     * give account.id
      *
-     * @param accountId restricts request to the given account.
+     * @param account context.
      * @param collection the name of the collection in which the item is declared
      * @param item item identifier
      */
-    async remove(accountId,collection,item) {
+    async remove(account,collection,item) {
         if (!item) throw new Error('no id provided');
-        let selector = {_account:accountId,_id:item};
+        let selector = {_account:account.id,_id:item};
         await this.connector.db.collection(collection).deleteOne(selector);
     }
 
@@ -84,19 +84,19 @@ class Data {
      * The request is constructed as an upsert. If no item id is provided,
      * one is generated using Identifier.new.
      *
-     * @param accountId enforces writes to the given account.
+     * @param account context.
      * @param collection the name of the collection to collect data from.
      * @param body an object or array of objects
      * @param id can also be provided explicitly in the url if body is a single object
      * @returns Object
      */
-    async put(accountId,collection,body,id) {
+    async put(account,collection,body,id) {
         if (Array.isArray(body)) {
             if (body.length === 0) throw new Error("Empty data set");
             let writes = [];
             for (let o of body) {
                 writes.push({updateOne:{
-                    filter:{_id:(o._id||Identifier.new),_account:(o._account||accountId)},
+                    filter:{_id:(o._id||Identifier.new),_account:(o._account||account.id)},
                     update:constructModifier(o),
                     upsert:true
                 }});
@@ -104,7 +104,7 @@ class Data {
             let result = await this.connector.db.collection(collection).bulkWrite(writes);
             return {upsertedCount:result.upsertedCount,modifiedCount:result.modifiedCount};
         } else {
-            let selector = {_id:body._id||id||Identifier.new,_account:accountId};
+            let selector = {_id:body._id||id||Identifier.new,_account:account.id};
             let modifier = constructModifier(body);
             let options = {returnNewDocument:true,upsert:true};
             let result = await this.connector.db.collection(collection).findOneAndUpdate(selector,modifier,options);
@@ -119,7 +119,7 @@ class Data {
             }
             modifier.$set._modified = new Date();
             modifier.$setOnInsert = {_created:new Date()};
-            if (!doc._createdBy) modifier.$setOnInsert._createdBy = "unknown";
+            if (!doc._createdBy) modifier.$setOnInsert._createdBy = account.userId;
             return modifier;
         }
     }

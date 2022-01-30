@@ -8,8 +8,8 @@ class Ontology {
     constructor(connector) {
         this.connector = connector;
         this.nameSpace = new NameSpace(connector);
-        this.fieldsCollection = this.connector.db.collection('fields');
-        this.accountsCollection = this.connector.db.collection('accounts');
+        this.fieldCollection = this.connector.db.collection('field');
+        this.accountCollection = this.connector.db.collection('account');
     }
     routes() {
         let router = require('express').Router();
@@ -33,12 +33,18 @@ class Ontology {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }
         });
-        router.put('/ns/:name/:fields?',async (req,res)=>{
+        router.put('/ns/:name',async (req,res)=>{
             try {
                 req.body._id = req.params.name;
-                let result = {};
-                if (req.params.fields) result = this.nameSpace.putFields(account,req.params.name,req.params.fields);
-                else result = await this.nameSpace.put(req.account,req.body);
+                let result = await this.nameSpace.put(req.account,req.body);
+                res.json(result);
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error putting to namespace: ${e.message}`});
+            }
+        });
+        router.put('/ns/:name/fields',async (req,res)=>{
+            try {
+                let result = await this.nameSpace.putFields(req.account,req.params.name,req.body)
                 res.json(result);
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error putting to namespace: ${e.message}`});

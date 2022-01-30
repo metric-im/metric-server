@@ -1,14 +1,14 @@
 const Identifier = require("@metric-im/identifier");
 
 /**
- * NameSpace defines a collection event fields for a domain
+ * NameSpace defines a collection of event fields for a domain
  * @type {Data}
  */
 class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.collection = this.connector.db.collection('namespace');
+        this.fieldCollection = this.connector.db.collection('field');
         this.data = new (require('./Data'))(connector);
     }
     get template() {
@@ -17,7 +17,6 @@ class NameSpace {
                 return {
                     _id: name,
                     _pid: "ROOT",
-                    acl:{[account.id]:3},
                     description: "",
                     availability: "private"
                 }
@@ -34,34 +33,36 @@ class NameSpace {
     }
     async remove(account,id) {
         if (!(await this.test.owner(account,id))) throw new Error("not authorized");
-        await this.data.remove(account.id,"namespace",id);
+        await this.data.remove(account,"namespace",id);
     }
     async put(account,body) {
         if (!body || !body._id) throw new Error('Namespace requires an identifier');
-        let acl = await this.connector.get()
-        if (!(await this.connector.test.owner(
-            {accounts:account.id},{namespace:body._id}
-        ))) throw new Error("not authorized");
-
         let ns = await this.collection.findOne({_id:body._id});
-        if (!ns) ns = Object.assign(this.template.ns(account),body);
-        if (!account.acl.namespace || !account.acl.namespace.find(a=>ns._id)) throw new Error('Not Authorized');
+        if (!ns) {
+            ns = Object.assign(this.template.ns(account),body);
+            await this.connector.acl.assign.owner({account:account.id},{namespace:body._id});
+        } else {
+            if (!(await this.connector.acl.test.owner(
+                {account:account.id},{namespace:body._id}
+            ))) throw new Error("not authorized");
+        }
+
         delete ns.fields; // use putFields
-        return await this.data.put(account.id,"namespace",body);
+        return await this.data.put(account,"namespace",body);
     }
     async get(account,id) {
         let query = [
-            {$lookup:{from:"fields",localField:"_id",foreignField:"_ns",as:"fields"}},
+            {$lookup:{from:"field",localField:"_id",foreignField:"_ns",as:"fields"}},
             {$sort:{_id:1}}
         ];
         if (id) {
-            let idExists = await this.connector.test.read({accounts:account.id},{namespace:id});
+            let idExists = await this.connector.test.read({account:account.id},{namespace:id});
             if (idExists) query.unshift({$match:{_id:id}});
             else return [];
             let result = await this.collection.aggregate(query).toArray();
             return result[0];
         } else {
-            let ids = await this.connector.acl.get.all({accounts:account.id},"namespace");
+            let ids = await this.connector.acl.get.all({account:account.id},"namespace");
             ids = ids.map(a=>a.namespace);
             query.unshift({$match:{$or:[{available:0},{_id:{$in:ids}}]}});
             let result = await this.collection.aggregate(query).toArray();
@@ -69,10 +70,11 @@ class NameSpace {
         }
     }
     async putFields(account,ns,fields=[]) {
-        if (!(await this.test.write(account,ns))) throw new Error("not authorized");
+        if (!fields || fields.length===0) return ({status:'warning',message:'empty field set'});
+        if (!(await this.connector.acl.test.write({account:account.id},{namespace:ns}))) throw new Error("not authorized");
         if (!Array.isArray(fields)) fields = [fields];
         fields = fields.map(field=>Object.assign(field,{_ns:ns}));
-        return await this.data.put(account.id,"fields",fields);
+        return await this.data.put(account,"field",fields);
     }
 }
 
