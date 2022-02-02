@@ -1,5 +1,6 @@
 let Parser = require('./Parser');
 let Id = require('@metric-im/identifier');
+const DimPath = require("./DimPath");
 
 /**
  * Record an event. This route is public with a few caveats:
@@ -15,6 +16,8 @@ class Ping {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('events');
+        this.fieldCollection = this.connector.db.collection('field');
+        this.ontology = new (require('./Ontology'))(connector);
     }
 
     routes() {
@@ -25,9 +28,16 @@ class Ping {
         })
         router.all("/:event?", async (req, res) => {
             try {
+                // let fieldMap = await this.ontology.fieldMap(req._account);
+                // let dp = new DimPath(fieldMap);
+                // let parsedQuery = Object.keys(req.query).reduce((r,k)=>{
+                //     r[k] = dp.parseValue(k,req.query[k]);
+                //     return r;
+                // },{});
+                let parsedQuery = await this.castFields(req.query);
                 let body = Object.assign({},
                     req.body || {},
-                    req.query || {},
+                    parsedQuery,
                     Parser.time(),
                     {_account: req.account.id, _event: req.params.event || 'ping', _id: Id.new}
                 );
@@ -39,6 +49,20 @@ class Ping {
             }
         });
         return router;
+    }
+    async castFields(o) {
+        let fields = await this.fieldCollection.find({_id:{$in:Object.keys(o)}}).toArray();
+        fields = fields.reduce((r,f)=>{r[f._id]=f;return r},[]);
+        return Object.keys(o).reduce((r,k)=>{
+            if (fields[k] && fields[k].dataType) {
+                if (['int','long','double','decimal'].includes(fields[k].dataType)) r[k] = Number(o[k]);
+                else r[k] = o[k];
+            } else {
+                // else guess
+                r[k] = (/^[.0-9]*$/.test(o[k]))?Number(o[k]):o[k];
+            }
+            return r;
+        },{})
     }
 }
 

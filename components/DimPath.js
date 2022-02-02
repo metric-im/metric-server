@@ -136,7 +136,7 @@ class DimPath {
      * @returns {number|*}
      */
     parseValue(name,val) {
-        let type = this.fieldMap[name].type;
+        let type = this.fieldMap[name]?this.fieldMap[name].dataType:null;
         if (['string','date','bool'].includes(type)) return val;
         else if (['int','long','double','decimal'].includes(type)) return Number(val);
         // else guess

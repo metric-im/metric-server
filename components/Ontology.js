@@ -92,7 +92,7 @@ class Ontology {
     }
     async fieldMap(accountId) {
         if (!accountId) return {};
-        let result = await this.connector.db.collection('ontology').findOne({_id:accountId});
+        let result = await this.connector.db.collection('field').findOne({_id:accountId});
         result = result || {}
         let fields = (result.fields||[]).reduce((r,o)=>{r[o.name]={type:o.type};return r},{});
         fields = (result.derivedFields||[]).reduce((r,o)=>{r[o.name]={

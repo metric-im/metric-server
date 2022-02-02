@@ -19,6 +19,7 @@ class Search {
         });
         router.all("/:dimensions/:metrics?", async (req, res) => {
             let {dimensions,metrics} = req.params;
+            if (dimensions[0]==="*") dimensions = "";
             // parse metrics into name and method. Sum is default if method is not provided
             if (metrics) {
                 if (typeof metrics === 'string') metrics = metrics.split(',');
@@ -36,7 +37,7 @@ class Search {
             // build basic match filter
             statement.push({
                 $match: Object.assign({},
-                Parser.parseTimeFilter(req.query),
+                Parser.parseTimeFilter(req.query,"_time"),
                 Parser.objectify(req.query.where || {})
             )});
             // add derived fields
@@ -66,7 +67,7 @@ class Search {
             if (Object.keys(dp.filters).length > 0) statement.push({$match:dp.filters});
             // group metrics if provided
             if (metrics.length > 0) {
-                let group = {_id: {_event: "$_event"}};
+                let group = {_id: {}};
                 let project = {_id: 0, '_event': '$_id._event'};
                 for (let dim of dp.dimensions) {
                     if (dim.compressor === dp._SKIP) continue;
@@ -90,7 +91,7 @@ class Search {
                 if (req.query.sort) statement.push({$sort: Parser.sort(req.query.sort)});
                 if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)})
             }
-            if (req.query.inspect) res.json(statement);
+            if (req.query._inspect) return res.json(statement);
             let results = await this.collection.aggregate(statement).toArray();
             // postprocess results
             for (let metric of metrics) {

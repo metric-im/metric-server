@@ -32,7 +32,7 @@ class NameSpace {
         }
     }
     async remove(account,id) {
-        if (!(await this.test.owner(account,id))) throw new Error("not authorized");
+        if (!(await this.connector.acl.test.owner(account,id))) throw new Error("not authorized");
         await this.data.remove(account,"namespace",id);
     }
     async put(account,body) {
