@@ -15,9 +15,13 @@ const DimPath = require("./DimPath");
 class Ping {
     constructor(connector) {
         this.connector = connector;
-        this.collection = this.connector.db.collection('events');
+        this.collection = this.connector.db.collection('event');
         this.fieldCollection = this.connector.db.collection('field');
         this.ontology = new (require('./Ontology'))(connector);
+        this.transformers = {};
+        for (let name of ['LocationFromIP','Holiday']) {
+            this.transformers[name] = new (require('../transformers/'+name))(connector);
+        }
     }
 
     routes() {
@@ -41,6 +45,8 @@ class Ping {
                     Parser.time(),
                     {_account: req.account.id, _event: req.params.event || 'ping', _id: Id.new}
                 );
+                await this.transformers.LocationFromIP.transform(req,body);
+                await this.transformers.Holiday.transform(req,body);
                 await this.collection.insertOne(body);
                 res.json(body);
             } catch (e) {
