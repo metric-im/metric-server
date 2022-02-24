@@ -10,7 +10,6 @@ class LocationFromIP {
     }
     async transform(context,event) {
         let ip = context.ip.replace(/::ffff:/,"");
-        console.log('ping request from '+ip);
         // if (ip === "::1") ip = '208.157.149.67';
         let geo = this.geoip.lookup(ip);
         if (geo) {
