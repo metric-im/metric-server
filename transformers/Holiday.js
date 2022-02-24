@@ -15,7 +15,6 @@ class Holiday {
             location = {country:event.country,state:event.state};
         }
         this.holiday.init(location.country);
-        event._time=new Date('2022-12-25');
         let result = this.holiday.isHoliday(event._time);
         if (result && result.name) Object.assign(event,{holiday:result.name});
     };
