@@ -8,8 +8,8 @@ class LocationFromIP {
         this.connector = connector;
         this.geoip = require('geoip-lite');
     }
-    async transform(req,event) {
-        let ip = req.ip.replace(/::ffff:/,"");
+    async transform(context,event) {
+        let ip = context.ip.replace(/::ffff:/,"");
         if (ip === "::1") ip = '208.157.149.67'; //TODO: remove from PROD
         let geo = this.geoip.lookup(ip);
         if (geo) {

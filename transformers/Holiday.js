@@ -7,11 +7,11 @@ class Holiday {
         let Holidays = require('date-holidays');
         this.holiday = new Holidays();
     }
-    async transform(req,event) {
+    async transform(context,event) {
         let location = {country:event.country,state:event.state};
         if (!event.country || !event.state) {
             location = new (require('./LocationFromIP'))(this.connector);
-            await location.transform(req,event);
+            await location.transform(context,event);
             location = {country:event.country,state:event.state};
         }
         this.holiday.init(location.country);

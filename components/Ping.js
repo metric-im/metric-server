@@ -1,6 +1,7 @@
 let Parser = require('./Parser');
 let Id = require('@metric-im/identifier');
 const DimPath = require("./DimPath");
+const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
 
 /**
  * Record an event. This route is public with a few caveats:
@@ -38,15 +39,23 @@ class Ping {
                 //     r[k] = dp.parseValue(k,req.query[k]);
                 //     return r;
                 // },{});
+                let context = Object.assign({
+                    hostname:req.hostname,
+                    url:req.url,
+                    ip:req.ip,
+                    ua:req.headers['User-Agent']
+                },req.body._origin);
+                if (req.body._origin) delete req.body._origin;
                 let parsedQuery = await this.castFields(req.query);
+                let parsedBody = await this.castFields(req.body)
                 let body = Object.assign({},
-                    req.body || {},
+                    parsedBody,
                     parsedQuery,
                     Parser.time(),
                     {_account: req.account.id, _event: req.params.event || 'ping', _id: Id.new}
                 );
-                await this.transformers.LocationFromIP.transform(req,body);
-                await this.transformers.Holiday.transform(req,body);
+                await this.transformers.LocationFromIP.transform(context,body);
+                await this.transformers.Holiday.transform(context,body);
                 await this.collection.insertOne(body);
                 res.json(body);
             } catch (e) {
