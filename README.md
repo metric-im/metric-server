@@ -16,7 +16,7 @@ Metric IM server for pinging, linking and reporting
 * _event - event name or "ping"
 * _account - authorized account or "public"
 
-## Deployment Configuration
+## Deployment Settings
 plantuml requires java
 ```bash
 sudo apt-get install -y openjdk-8-jdk
