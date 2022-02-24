@@ -2,12 +2,12 @@ const Parser = require('./Parser');
 const DimPath = require("./DimPath");
 
 /**
- * Search for events using aggregation
+ * Pull for events using aggregation
  */
-class Search {
+class Pull {
     constructor(connector) {
         this.connector = connector;
-        this.collection = this.connector.db.collection('events');
+        this.collection = this.connector.db.collection('event');
         this.ontology = new (require('./Ontology'))(connector);
     }
 
@@ -127,4 +127,4 @@ function processRatio(metric,results) {
     }
 }
 
-module.exports = Search;
+module.exports = Pull;
