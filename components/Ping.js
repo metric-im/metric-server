@@ -39,7 +39,6 @@ class Ping {
                 //     r[k] = dp.parseValue(k,req.query[k]);
                 //     return r;
                 // },{});
-                console.log(`reqip:${req.ip} origin:${JSON.stringify(req.body._origin)}`);
                 let context = Object.assign({
                     hostname:req.hostname,
                     url:req.url,
