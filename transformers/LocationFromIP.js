@@ -7,6 +7,8 @@ class LocationFromIP {
     constructor(connector) {
         this.connector = connector;
         this.geoip = require('geoip-lite');
+        this.requires=[];
+        this.provides = ['location','country','region','timezone','city','latitude','longitude']
     }
     async transform(context,event) {
         let ip = context.ip.replace(/::ffff:/,"");

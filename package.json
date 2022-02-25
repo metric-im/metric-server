@@ -21,6 +21,7 @@
   "dependencies": {
     "@metric-im/connector": "^1.0.6",
     "@metric-im/identifier": "^1.0.0",
+    "axios": "^0.26.0",
     "bcrypt": "^5.0.1",
     "command-line-args": "^5.2.0",
     "command-line-usage": "^6.1.1",

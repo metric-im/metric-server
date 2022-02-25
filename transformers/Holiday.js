@@ -6,14 +6,11 @@ class Holiday {
         this.connector = connector;
         let Holidays = require('date-holidays');
         this.holiday = new Holidays();
+        this.requires = ['country','state'];
+        this.provides = ['holiday'];
     }
     async transform(context,event) {
         let location = {country:event.country,state:event.state};
-        if (!event.country || !event.state) {
-            location = new (require('./LocationFromIP'))(this.connector);
-            await location.transform(context,event);
-            location = {country:event.country,state:event.state};
-        }
         this.holiday.init(location.country);
         let result = this.holiday.isHoliday(event._time);
         if (result && result.name) Object.assign(event,{holiday:result.name});
