@@ -17,7 +17,7 @@ class Pull {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         });
-        router.all("/:dimensions/:metrics?", async (req, res) => {
+        router.all("/:format/:dimensions/:metrics?", async (req, res) => {
             let {dimensions,metrics} = req.params;
             if (dimensions[0]==="*") dimensions = "";
             // parse metrics into name and method. Sum is default if method is not provided

@@ -11,7 +11,7 @@ const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAA
  * * date (YYYY/MM/DD string), year, month, day, hour, minute and week are reserved and calculated
  *
  * All data sent via query string is recorded as strings. Use PUT method to provide specific
- * attribute types in the body via JSON.
+ * attribute types in the body via Json.
  */
 class Ping {
     constructor(connector) {

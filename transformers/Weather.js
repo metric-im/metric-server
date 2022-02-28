@@ -10,11 +10,12 @@ class Weather {
         this.base = "https://api.openweathermap.org/data/2.5/weather"
     }
     async transform(context,event) {
-        // let test = await axios.get('https://metric.im/pull/_event:view,site,source,country:KY/?_auth=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InNwcmFndWUiLCJ0cyI6MTY0NDg2NjUyNTUwNywiaWF0IjoxNjQ0ODY2NTI1LCJleHAiOjE2NzY0MDI1MjV9.t-FP592iTdGDMNyy9q_-JEpx7dIYy3IBNaXskrwF_6A');
         if (!event.latitude || !event.longitude) return;
-        let result = await axios.get(`${this.base}?lon=${event.latitude}&lat=${event.longitude}&appid=${this.key}`);
+        let url = `${this.base}?lon=${event.latitude}&lat=${event.longitude}&appid=${this.key}&units=metric`;
+        let result = await axios.get(url);
         if (result && result.data.weather && result.data.weather.length>0) {
-            event.weather = result.data.weather[0].description;
+            event.weather = result.data.weather[0].main;
+            event.weatherDescription = result.data.weather[0].description;
             event.temperature = result.data.main.temp;
             event.humidity = result.data.main.humidity;
             event.barometric_pressure = result.data.main.pressure;
