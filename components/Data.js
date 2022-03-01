@@ -1,4 +1,3 @@
-let Formatter = require('./Formatter');
 let Parser = require('./Parser');
 let Identifier = require('@metric-im/identifier');
 

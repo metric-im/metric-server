@@ -102,7 +102,16 @@ class Pull {
                     if (metric.method==='ratio') processRatio(metric,results);
                 }
             }
-            res.json(results);
+            try {
+                let format = req.params.format.split('.');
+                let module = require('../formatter/'+format[0].toLowerCase()+".js");
+                if (!module) res.status(400).json({message:'format unavailable'});
+                let formatter = new module(format.slice(1));
+                await formatter.render(res,results);
+            } catch(e) {
+                console.error(e);
+                res.status(500).send();
+            }
         });
         return router;
     }

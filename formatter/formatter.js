@@ -1,24 +1,27 @@
-/**
- * Formatter provides a number of utility functions for transforming data
- * into a style suitable for the requester.
- */
-let moment = require('moment');
-
 class Formatter {
-    static csv(data,options={}) {
-        let flat = Formatter.flatten(data,options);
-        let header = "";
-        for (let col in flat.template) header+="\""+col+"\",";
-        let csv = header.slice(0,-1)+'\n';
-        for (let col of flat.rows) {
-            let row = "";
-            for (let f of Object.keys(col)) row+=(typeof(col[f])==='string'?"\""+col[f]+"\"":col[f])+",";
-            csv += row.slice(0,-1)+'\n';
-        }
-        return csv;
-    };
+    constructor(props) {
+        this.options = props.reduce((r,p)=>{r[p]=true;return r},{});
+    }
+    async render(res,data) {
+        if (this.options.file) this.sendFile(res,data,'data.json');
+        else res.send(data);
+    }
+    sendFile(res,data,name='data.txt') {
+        res.setHeader('Content-type', "application/octet-stream");
+        res.setHeader('Content-disposition', 'attachment; filename='+name);
+        res.charset = 'UTF-8';
+        res.send(data);
+        res.end();
+    }
 
-    static flatten(data,options={}) {
+    /**
+     * Build a grid from the incoming data, transposing object and array results
+     * into name value pairs
+     *
+     * @param data
+     * @returns {{template: {}, rows: *[]}}
+     */
+    flatten(data) {
         let template={};
         let rows = [];
         buildTemplate(data);
@@ -34,8 +37,12 @@ class Formatter {
                     buildTemplate(data[i],name);
                 }
             } else if (typeof(data) === "object") {
-                for (let o in data) {
-                    if (data.hasOwnProperty(o)) buildTemplate(data[o],(name?name+"."+o:o));
+                if (data.constructor.name === "ObjectID") {
+                    template[name] = data.toString();
+                } else {
+                    for (let o in data) {
+                        if (data.hasOwnProperty(o)) buildTemplate(data[o],(name?name+"."+o:o));
+                    }
                 }
             } else {
                 template[name] = typeof(data)==='string'?"":0;
@@ -61,7 +68,6 @@ class Formatter {
                 rows[rows.length-1][name] = data;
             }
         }
-    };
+    }
 }
-
 module.exports = Formatter;
