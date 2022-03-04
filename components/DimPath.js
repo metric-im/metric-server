@@ -1,8 +1,9 @@
 const Parser = require("./Parser");
 
 class DimPath {
-    constructor(fieldMap) {
+    constructor(fieldMap,sort) {
         this.fieldMap = fieldMap;
+        this.sort = sort || {};
         this.dimensions = [];
         this._ASSIGN = "assign";
         this._COMPRESS = "compress";
@@ -17,8 +18,8 @@ class DimPath {
         this.dimensions = data.map(k=>{
             let match = k.match(/^([@+!])?([A-za-z0-9-_]+)[:]?(.*)/);
             let compressor = null;
-            if (match[1]==='+') compressor=this._ASSIGN;
-            else if (match[1]==='@') compressor=this._COMPRESS;
+            if (match[1]==='@') compressor=this._ASSIGN;
+            else if (match[1]==='+') compressor=this._COMPRESS;
             else if (match[1]==='!') compressor=this._SKIP;
             return {name:match[2],value:match[3],compressor:compressor,filters:[]};
         });
@@ -78,51 +79,72 @@ class DimPath {
         return result;
     }
     organize(data) {
-        if (!this.hasCompressors || this.dimensions.length === 0) return data;
+        if (this.dimensions.length === 0) return data;
         let index = 0;
         let dimensions = this.dimensions;
-        return process([]);
+        data = data.sort((a,b)=>{
+            for (let i=0;i<dimensions.length;i++) {
+                if (a[dimensions[i].name]<b[dimensions[i].name]) return -1;
+                else if (a[dimensions[i].name]>b[dimensions[i].name]) return 1;
+            }
+            return 0;
+        })
+        return process.call(this,{});
 
         function process(key) {
             let result = [];
+            let resultRecord = {};
             while(index < data.length) {
                 let record = data[index];
-                let resultRecord = {};
-                for (let kid of key) {
-                    let keyname = Object.keys(kid)[0];
-                    if (record[keyname] !== kid[keyname]) {
-                        index--;
-                        return result;
-                    }
+                // if the current record doesn't match the key return to the caller
+                for (let k of Object.keys(key)) {
+                    if (record[k] !== key[k]) return result;
                 }
+                // step through remaining dimensions
                 let compressorApplied = false;
-                for (let i=key.length;i<dimensions.length;i++) {
-                    if (dimensions[i].compressor && i > key.length) {
-                        // process the remaining dimensions
-                        resultRecord[dimensions[i].name] = process(dimensions.map(d=>{
-                            return {[d.name]:record[d.name]}
-                        }).slice(0,i)).reduce((r,d)=>{
-                            // render array into object
-                            r[d[dimensions[i].name]] = Object.keys(d).reduce((o,k)=>{
-                                if (k !== dimensions[i].name) o[k] = d[k];
-                                return o;
-                            },{});
-                            return r;
-                        },{});
+                let position = Object.keys(key).length;
+                let i = position;
+                while (i < dimensions.length) {
+                    if (dimensions[i].compressor === this._ASSIGN) {
+                        let result = process.call(this,getKey(record,i));
+                        if (i<dimensions.length-1) resultRecord[record[[dimensions[i].name]]] = result;
+                        else resultRecord[record[[dimensions[i].name]]] = result[0];
                         compressorApplied = true;
-                    } else {
+                        break;
+                    } else if (dimensions[i].compressor === this._COMPRESS) {
+                        let result = process.call(this,getKey(record,i));
+                        for (let item of result) {
+                            let base = record[dimensions[i].name];
+                            if (i<dimensions.length-1) {
+                                resultRecord[base+"."+item[dimensions[i+1].name]] = Object.keys(item).reduce((r,k)=>{
+                                    if (k !== dimensions[i+1].name) r[k] = item[k];
+                                    return r;
+                                },{});
+                            } else Object.keys(item).reduce((r,k)=>{resultRecord[base+"."+k] = item[k]},{});
+                        }
+                        compressorApplied = true;
+                        break;
+                    } else if (dimensions[i].compressor !== this._SKIP) {
                         resultRecord[dimensions[i].name] = record[dimensions[i].name];
                     }
+                    i++;
                 }
                 if (!compressorApplied) {
                     for (let attr in record) {
                         if (!dimensions.find(d=>d.name===attr)) resultRecord[attr] = record[attr];
                     }
                 }
+                result.push(Object.assign({},resultRecord));
+                resultRecord = {};
                 index++;
-                result.push(resultRecord);
             }
             return result;
+        }
+        function getKey(record,i) {
+            return [...Array(i+1).keys()].reduce((r,ii)=>{
+                r[dimensions[ii].name]=record[dimensions[ii].name];
+                return r;
+            },{});
         }
     }
     /**

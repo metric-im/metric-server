@@ -4,7 +4,7 @@ class Weather {
     constructor(connector) {
         this.connector = connector;
         this.requires = ['location'];
-        this.provides = ['weather','temperature','humidity','barometric_pressure','wind_speed',
+        this.provides = ['weather','temperature','humidity','barometer','wind_speed',
             'wind_direction','wind_gust','weather_visibility'];
         this.key = this.connector.profile.secrets.OPENWEATHER_KEY;
         this.base = "https://api.openweathermap.org/data/2.5/weather"
@@ -18,7 +18,7 @@ class Weather {
             event.weatherDescription = result.data.weather[0].description;
             event.temperature = result.data.main.temp;
             event.humidity = result.data.main.humidity;
-            event.barometric_pressure = result.data.main.pressure;
+            event.barometer = result.data.main.pressure;
             event.wind_speed = result.data.wind.speed;
             event.wind_direction = result.data.wind.deg;
             event.wind_gust = result.data.wind.gust;

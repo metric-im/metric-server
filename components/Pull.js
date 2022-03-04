@@ -30,7 +30,7 @@ class Pull {
             } else metrics = [];
             // parse dimensions
             let fieldMap = await this.ontology.fieldMap(req._account);
-            let dp = new DimPath(fieldMap);
+            let dp = new DimPath(fieldMap,req.query.sort);
             dp.parse(dimensions);
 
             let statement = [];
@@ -94,8 +94,6 @@ class Pull {
             if (req.query._inspect) return res.json(statement);
             let results = await this.collection.aggregate(statement).toArray();
             // postprocess results
-            for (let metric of metrics) {
-            }
             if (metrics.length > 0 && results.length > 0) {
                 results = dp.organize(results);
                 for (let metric of metrics) {
