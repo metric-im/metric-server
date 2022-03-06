@@ -79,6 +79,112 @@ class DimPath {
         return result;
     }
     organize(data) {
+        if (this.dimensions.length === 0 || data.length === 0) return data;
+        data = data.sort((a,b)=>{
+            for (let dim of this.dimensions) {
+                if (a[dim.name]<b[dim.name]) return -1;
+                else if (a[dim.name]>b[dim.name]) return 1;
+            }
+            return 0;
+        });
+        let organized = [];
+        let compressed = {};
+        let metrics = Object.keys(data[0]).filter(key=>!this.dimensions.find(dim=>dim.name===key));
+        for (let record of data) {
+            let resultRecord = {};
+            // null is applied rather than 'undefined' so the attribute is acknowledged
+            for (let dim of this.dimensions) resultRecord[dim.name] = record[dim.name]||null;
+            for (let metric of metrics) resultRecord[metric] = record[metric];
+            organized.push(resultRecord);
+            let key = compressed
+            for (let dim of this.dimensions) {
+                if (!key[record[dim.name]]) key[record[dim.name]] = {};
+                key = key[record[dim.name]];
+            }
+            for (let metric of metrics) key[metric] = record[metric];
+        }
+        let index = 0;
+        return arrange.call(this,organized);
+
+        function arrange(data,depth=0) {
+            let dimStack = [];
+            dimStack.push([]);
+            dimStack[0].push({});
+            dimStack.push(dimStack[0][0]);
+            let hotRecord = this.dimensions.reduce((r,k)=>{r[k] = data[0][k];return r;},{});
+            while (index < data.length) {
+                let record = data[index];
+                let dimIndex = 0;
+                for (let [key, value] of Object.entries(hotRecord)) {
+                    if (value !== record[key]) {
+                        dimStack = dimStack.slice(0,(dimIndex*2)+1);
+                        if (this.dimensions[dimIndex].compressor === this._ASSIGN) {
+                            dimStack.pop();
+                            let newSet = [{}]
+                            dimStack[dimStack.length-1][key][value] = newSet;
+                            dimStack.push(newSet)
+                            dimStack.push(newSet[0]);
+                        } else {
+                            let newSet = {[key]:record[key]};
+                            dimStack[dimStack.length-1].push(newSet);
+                            dimStack.push(newSet);
+                        }
+                        break;
+                    }
+                    hotRecord[key] = record[key];
+                    dimIndex++;
+                }
+                for (let i=Object.keys(hotRecord).length;i<Object.keys(record).length;i++)  {
+                    let dim = this.dimensions[i];
+                    let key = Object.keys(record)[i]
+                    if (dim && dim.compressor === this._ASSIGN) {
+                        let slot = [{}];
+                        dimStack[dimStack.length - 1][key] = {[record[key]]:slot};
+                        dimStack.push(slot);
+                        dimStack.push(slot[0]);
+                        hotRecord = Object.keys(record).reduce((r,k,n)=>{
+                            if (n <= dimIndex) r[k] = record[k];
+                            return r;
+                        },{});
+                    } else {
+                        dimStack[dimStack.length-1][key] = record[key];
+                    }
+                }
+                dimStack.pop();
+                let slot = {};
+                dimStack[dimStack.length-1].push(slot);
+                dimStack.push(slot);
+                index++;
+            }
+            return dimStack[0];
+        }
+        function sliceDimension(data,depth) {
+            let baseValue = data[index];
+            let result = [];
+            while (index < data.length) {
+                if (this.dimensions.slice(0,depth).some(dim=>data[index][dim.name] !== baseValue[dim.name])) break;
+                result.push(Object.keys(data[index]).reduce((r, k, n) => {
+                    if (n > 0) r[k] = data[index][k];
+                    return r;
+                }, {}));
+                index++;
+            }
+            return result;
+        }
+        function slotDimension(data,depth) {
+            let baseValue = data[index];
+            let result = {};
+            while (index < data.length) {
+                if (this.dimensions.slice(0,depth).some(dim=>data[index][dim.name] !== baseValue[dim.name])) break;
+                let key = Object.values(data[index])[depth];
+                if (!result[key]) result[key] = [];
+                result[key] = arrange.call(this,sliceDimension.call(this,),depth+1);
+                i++;
+            }
+            return result;
+        }
+    }
+    organize2(data) {
         if (this.dimensions.length === 0) return data;
         let index = 0;
         let dimensions = this.dimensions;
@@ -94,6 +200,8 @@ class DimPath {
         function process(key) {
             let result = [];
             let resultRecord = {};
+            let position = Object.keys(key).length;
+            let pin = null;
             while(index < data.length) {
                 let record = data[index];
                 // if the current record doesn't match the key return to the caller
@@ -102,7 +210,6 @@ class DimPath {
                 }
                 // step through remaining dimensions
                 let compressorApplied = false;
-                let position = Object.keys(key).length;
                 let i = position;
                 while (i < dimensions.length) {
                     if (dimensions[i].compressor === this._ASSIGN) {
@@ -112,14 +219,19 @@ class DimPath {
                         compressorApplied = true;
                         break;
                     } else if (dimensions[i].compressor === this._COMPRESS) {
+                        pin = getKey(record,i-1);
                         let result = process.call(this,getKey(record,i));
                         for (let item of result) {
                             let base = record[dimensions[i].name];
                             if (i<dimensions.length-1) {
-                                resultRecord[base+"."+item[dimensions[i+1].name]] = Object.keys(item).reduce((r,k)=>{
-                                    if (k !== dimensions[i+1].name) r[k] = item[k];
-                                    return r;
-                                },{});
+                                if (dimensions[i+1].compressor===this._COMPRESS) {
+                                    for (let key in item) resultRecord[base+"."+key] = item[key];
+                                } else {
+                                    resultRecord[base+"."+item[dimensions[i+1].name]] = Object.keys(item).reduce((r,k)=>{
+                                        if (k !== dimensions[i+1].name) r[k] = item[k];
+                                        return r;
+                                    },{});
+                                }
                             } else Object.keys(item).reduce((r,k)=>{resultRecord[base+"."+k] = item[k]},{});
                         }
                         compressorApplied = true;
@@ -136,8 +248,20 @@ class DimPath {
                 }
                 result.push(Object.assign({},resultRecord));
                 resultRecord = {};
+                if (result.length > 1 && dimensions[i] && dimensions[i].compressor === this._COMPRESS) {
+                    if (result[result.length-2][dimensions[i].name] === result[result.length-2][dimensions[i].name]) {
+                        Object.assign(result[result.length-2][dimensions[i].name],result.pop());
+                    }
+                }
+
+                let pinned = false;
+                if (pin) pinned = !Object.keys(pin).some(k=>(pin[k]!==resultRecord[k]))
+                if (!pinned) {
+                    pin = null;
+                }
                 index++;
             }
+            if (Object.keys(resultRecord).length > 0) result.push(resultRecord);
             return result;
         }
         function getKey(record,i) {
