@@ -111,45 +111,69 @@ class DimPath {
             dimStack.push([]);
             dimStack[0].push({});
             dimStack.push(dimStack[0][0]);
-            let hotRecord = this.dimensions.reduce((r,k)=>{r[k] = data[0][k];return r;},{});
+            let pinRecord = {};
+            // let hotRecord = this.dimensions.reduce((r,dim)=>{
+            //     r[dim.name] = data[0][dim.name];return r;
+            // },{});
             while (index < data.length) {
                 let record = data[index];
-                let dimIndex = 0;
-                for (let [key, value] of Object.entries(hotRecord)) {
-                    if (value !== record[key]) {
-                        dimStack = dimStack.slice(0,(dimIndex*2)+1);
-                        if (this.dimensions[dimIndex].compressor === this._ASSIGN) {
-                            dimStack.pop();
-                            let newSet = [{}]
-                            dimStack[dimStack.length-1][key][value] = newSet;
-                            dimStack.push(newSet)
-                            dimStack.push(newSet[0]);
+                let col = 0;
+                let pinDepth = 0;
+                for (let [key, value] of Object.entries(record)) {
+                    let dim = this.dimensions[col];
+                    if (dim) {
+                        if (dim.compressor === this._ASSIGN) {
+                            if (value !== pinRecord[key]) {
+                                if (Object.keys(dimStack[dimStack.length-1]).length===0) {
+                                    dimStack[dimStack.length-2].pop();
+                                }
+                                dimStack = dimStack.slice(0,((++pinDepth)*2));
+                                let newSet = [{}];
+                                if (!dimStack[dimStack.length-1][key]) dimStack[dimStack.length-1][key] = {};
+                                dimStack[dimStack.length-1][key][value] = newSet;
+                                dimStack.push(newSet)
+                                dimStack.push(newSet[0]);
+                            }
+                            pinRecord = this.dimensions.reduce((r,dim,n)=>{
+                                if (n <= col) r[dim.name] = record[dim.name];return r;
+                            },{});
                         } else {
-                            let newSet = {[key]:record[key]};
-                            dimStack[dimStack.length-1].push(newSet);
-                            dimStack.push(newSet);
+                            if (Object.keys(pinRecord).includes(key)) {
+                                if (value !== pinRecord[key]) {
+                                    if (Object.keys(dimStack[dimStack.length-1]).length===0) {
+                                        dimStack[dimStack.length-2].pop();
+                                    }
+                                    dimStack = dimStack.slice(0,(col*2)+1);
+                                    let newSet = {[key]:value};
+                                    dimStack[dimStack.length-1].push(newSet);
+                                    dimStack.push(newSet);
+                                    pinRecord = {};
+                                }
+                            } else {
+                                dimStack[dimStack.length - 1][key] = record[key];
+                            }
                         }
-                        break;
-                    }
-                    hotRecord[key] = record[key];
-                    dimIndex++;
-                }
-                for (let i=Object.keys(hotRecord).length;i<Object.keys(record).length;i++)  {
-                    let dim = this.dimensions[i];
-                    let key = Object.keys(record)[i]
-                    if (dim && dim.compressor === this._ASSIGN) {
-                        let slot = [{}];
-                        dimStack[dimStack.length - 1][key] = {[record[key]]:slot};
-                        dimStack.push(slot);
-                        dimStack.push(slot[0]);
-                        hotRecord = Object.keys(record).reduce((r,k,n)=>{
-                            if (n <= dimIndex) r[k] = record[k];
-                            return r;
-                        },{});
                     } else {
                         dimStack[dimStack.length-1][key] = record[key];
                     }
+                    col++;
                 }
+                // for (let i=Object.keys(hotRecord).length;i<Object.keys(record).length;i++)  {
+                //     let dim = this.dimensions[i];
+                //     let key = Object.keys(record)[i]
+                //     if (dim && dim.compressor === this._ASSIGN) {
+                //         let slot = [{}];
+                //         dimStack[dimStack.length - 1][key] = {[record[key]]:slot};
+                //         dimStack.push(slot);
+                //         dimStack.push(slot[0]);
+                //         hotRecord = Object.keys(record).reduce((r,k,n)=>{
+                //             if (n <= dimIndex) r[k] = record[k];
+                //             return r;
+                //         },{});
+                //     } else {
+                //         dimStack[dimStack.length-1][key] = record[key];
+                //     }
+                // }
                 dimStack.pop();
                 let slot = {};
                 dimStack[dimStack.length-1].push(slot);
