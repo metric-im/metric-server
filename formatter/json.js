@@ -1,8 +1,8 @@
 let Formatter = require('./formatter');
 
 class JSON extends Formatter {
-    constructor(props) {
-        super(props);
+    constructor(dp,props) {
+        super(dp,props);
     }
     async render(res,data) {
         if (this.options.file) this.sendFile(res,data,'data.json');

@@ -1,8 +1,8 @@
 let Formatter = require('./formatter');
 
 class Table extends Formatter {
-    constructor(props) {
-        super(props);
+    constructor(dp,props) {
+        super(dp,props);
     }
     construct(data) {
         let flat = this.flatten(data);

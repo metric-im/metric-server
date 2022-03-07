@@ -31,7 +31,7 @@ class Pull {
             // parse dimensions
             let fieldMap = await this.ontology.fieldMap(req._account);
             let dp = new DimPath(fieldMap,req.query.sort);
-            dp.parse(dimensions);
+            dp.parse(dimensions,metrics);
 
             let statement = [];
             // build basic match filter
@@ -104,7 +104,7 @@ class Pull {
                 let format = req.params.format.split('.');
                 let module = require('../formatter/'+format[0].toLowerCase()+".js");
                 if (!module) res.status(400).json({message:'format unavailable'});
-                let formatter = new module(format.slice(1));
+                let formatter = new module(dp,format.slice(1));
                 await formatter.render(res,results);
             } catch(e) {
                 console.error(e);

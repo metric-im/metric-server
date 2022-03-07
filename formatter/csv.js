@@ -1,8 +1,8 @@
 let Formatter = require('./formatter');
 
 class CSV extends Formatter {
-    constructor(props) {
-        super(props);
+    constructor(dp,props) {
+        super(dp,props);
     }
     async render(res,data) {
         let flat = this.flatten(data);

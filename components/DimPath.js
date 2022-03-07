@@ -12,7 +12,8 @@ class DimPath {
     get hasCompressors() {
         return this.dimensions.some(d=>d.compressor);
     }
-    parse(data=[]) {
+    parse(data=[],metrics) {
+        this.metrics = metrics;
         if (typeof data === 'string') data = this.smartSplit(data);
         // parse dimension syntax for display and filter
         this.dimensions = data.map(k=>{

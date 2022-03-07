@@ -1,6 +1,8 @@
 class Formatter {
-    constructor(props) {
-        this.options = props.reduce((r,p)=>{r[p]=true;return r},{});
+    constructor(dp,props) {
+        this.dp = dp;
+        if (props) this.options = props.reduce((r,p)=>{r[p]=true;return r},{});
+        else this.options = {};
     }
     async render(res,data) {
         if (this.options.file) this.sendFile(res,data,'data.json');
@@ -27,7 +29,7 @@ class Formatter {
         buildTemplate(data);
         rows.push(Object.assign({},template));
         read(data);
-        return {template:template,rows:rows};
+        return {template:Object.keys(template),rows:rows};
 
         function buildTemplate(data,name) {
             if (data === null) {
@@ -67,6 +69,12 @@ class Formatter {
             } else {
                 rows[rows.length-1][name] = data;
             }
+        }
+    }
+    template(dimensions,metrics) {
+        return {
+            dimensions:(Array.isArray(dimensions)?dimensions:[dimensions]),
+            metrics:(Array.isArray(metrics)?metrics:[metrics]),
         }
     }
 }
