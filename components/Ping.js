@@ -20,7 +20,7 @@ class Ping {
         this.fieldCollection = this.connector.db.collection('field');
         this.ontology = new (require('./Ontology'))(connector);
         this.transformers = {};
-        for (let name of ['LocationFromIP','Holiday','Weather']) {
+        for (let name of ['BrowserIdentity','LocationFromIP','Holiday','Weather']) {
             this.transformers[name] = new (require('../transformers/'+name))(connector);
         }
     }
@@ -43,7 +43,7 @@ class Ping {
                     hostname:req.hostname,
                     url:req.url,
                     ip:req.ip,
-                    ua:req.headers['User-Agent']
+                    ua:req.headers['user-agent']
                 },req.body._origin);
                 if (req.body._origin) delete req.body._origin;
                 if (this.connector.profile.profile==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
@@ -56,6 +56,7 @@ class Ping {
                     {_account: req.account.id, _event: req.params.event || 'ping', _id: Id.new}
                 );
                 await this.transformers.LocationFromIP.transform(context,body);
+                await this.transformers.BrowserIdentity.transform(context,body);
                 await this.transformers.Holiday.transform(context,body);
                 await this.transformers.Weather.transform(context,body);
                 await this.collection.insertOne(body);
