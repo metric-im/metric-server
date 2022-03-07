@@ -8,6 +8,16 @@ class Chart extends Formatter {
     construct(data) {
         let color = new ColorFactory();
         let labels = data.map(row=>row[this.dp.dimensions[0].name]);
+        // let compressedMetrics = this.dp.metrics.concat(data.slice(1).reduce((r,row)=>{
+        //     for (let {key,value} of Object.entries(row)) {
+        //         let divider = key.lastIndexOf('.');
+        //         if (divider >= 0) {
+        //             let metric = key.substr(divider+1);
+        //             let dim = key.substr(0,divider);
+        //             r.push={name:metric,title:dim+" "+metric,method:'sum'};
+        //         }
+        //     }
+        // },[]))
         let datasets=this.dp.metrics.map(metric=>{
             let dataset =  {
                 label:metric.name+(metric.method!=='sum'?` (${metric.method})`:""),

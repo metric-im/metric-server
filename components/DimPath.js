@@ -161,7 +161,7 @@ class DimPath {
                         pinRecord = dimensions.reduce((r,dim,n)=>{
                             if (n <= col) r[dim.name] = record[dim.name];return r;
                         },{});
-                    // } else if (dim.compressor === this._SKIP) {
+                    } else if (dim.compressor === this._SKIP) {
                         // bypass this attribute
                     } else {
                         if (Object.keys(pinRecord).includes(key)) {

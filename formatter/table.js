@@ -8,7 +8,7 @@ class Table extends Formatter {
         let flat = this.flatten(data);
         let header = "";
         let rows = "";
-        for (let col in flat.template) header+="<th>"+col+"</th>";
+        for (let col of flat.template) header+="<th>"+col+"</th>";
         rows += "<tr>"+header+"</tr>\n";
         for (let col of flat.rows) {
             let row = "";

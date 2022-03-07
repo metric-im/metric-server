@@ -8,14 +8,14 @@ class CSV extends Formatter {
         let flat = this.flatten(data);
         let csv = "";
         if (this.options.inverse) {
-            for (let col of Object.keys(flat.template)) {
+            for (let col of flat.template) {
                 let row = `"${col}",`;
                 for (let r of flat.rows) row+=(typeof(r[col])==='string'?"\""+r[col]+"\"":r[col])+",";
                 csv += row.slice(0,-1)+'\n';
             }
         } else {
             let header = "";
-            for (let col in flat.template) header+="\""+col+"\",";
+            for (let col of flat.template) header+="\""+col+"\",";
             csv = header.slice(0,-1)+'\n';
             for (let col of flat.rows) {
                 let row = "";
