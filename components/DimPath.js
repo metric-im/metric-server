@@ -80,220 +80,135 @@ class DimPath {
     }
     organize(data) {
         if (this.dimensions.length === 0 || data.length === 0) return data;
-        data = data.sort((a,b)=>{
+        data = data.sort((a, b) => {
             for (let dim of this.dimensions) {
-                if (a[dim.name]<b[dim.name]) return -1;
-                else if (a[dim.name]>b[dim.name]) return 1;
+                if (a[dim.name] < b[dim.name]) return -1;
+                else if (a[dim.name] > b[dim.name]) return 1;
             }
             return 0;
         });
         let organized = [];
-        let compressed = {};
-        let metrics = Object.keys(data[0]).filter(key=>!this.dimensions.find(dim=>dim.name===key));
+        let metrics = Object.keys(data[0]).filter(key => !this.dimensions.find(dim => dim.name === key));
         for (let record of data) {
             let resultRecord = {};
             // null is applied rather than 'undefined' so the attribute is acknowledged
-            for (let dim of this.dimensions) resultRecord[dim.name] = record[dim.name]||null;
+            for (let dim of this.dimensions) resultRecord[dim.name] = record[dim.name] || null;
             for (let metric of metrics) resultRecord[metric] = record[metric];
             organized.push(resultRecord);
-            let key = compressed
-            for (let dim of this.dimensions) {
-                if (!key[record[dim.name]]) key[record[dim.name]] = {};
-                key = key[record[dim.name]];
-            }
-            for (let metric of metrics) key[metric] = record[metric];
         }
+        return this.arrange(this.dimensions, organized);
+    }
+    arrange(dimensions,data) {
+        let dimStack = [];
+        dimStack.push([]);
+        dimStack[0].push({});
+        dimStack.push(dimStack[0][0]);
+        let pinRecord = {};
         let index = 0;
-        return arrange.call(this,organized);
-
-        function arrange(data,depth=0) {
-            let dimStack = [];
-            dimStack.push([]);
-            dimStack[0].push({});
-            dimStack.push(dimStack[0][0]);
-            let pinRecord = {};
-            // let hotRecord = this.dimensions.reduce((r,dim)=>{
-            //     r[dim.name] = data[0][dim.name];return r;
-            // },{});
-            while (index < data.length) {
-                let record = data[index];
-                let col = 0;
-                let pinDepth = 0;
-                for (let [key, value] of Object.entries(record)) {
-                    let dim = this.dimensions[col];
-                    if (dim) {
-                        if (dim.compressor === this._ASSIGN) {
+        while (index < data.length) {
+            let record = data[index];
+            let col = 0;
+            let pinDepth = 0;
+            for (let [key, value] of Object.entries(record)) {
+                let dim = dimensions[col];
+                if (dim) {
+                    if (dim.compressor === this._ASSIGN) {
+                        if (value !== pinRecord[key]) {
+                            this.clearStackTop(dimStack);
+                            dimStack = dimStack.slice(0,((++pinDepth)*2));
+                            let newSet = [{}];
+                            if (!dimStack[dimStack.length-1][key]) dimStack[dimStack.length-1][key] = {};
+                            dimStack[dimStack.length-1][key][value] = newSet;
+                            dimStack.push(newSet)
+                            dimStack.push(newSet[0]);
+                        }
+                        pinRecord = dimensions.reduce((r,dim,n)=>{
+                            if (n <= col) r[dim.name] = record[dim.name];return r;
+                        },{});
+                    } else if (dim.compressor === this._COMPRESS) {
+                        if (value !== pinRecord[key]) {
+                            this.clearStackTop(dimStack);
+                            dimStack = dimStack.slice(0,((++pinDepth)*2));
+                            let slice = this.sliceDimension(dimensions,data,index,col);
+                            let sliceDimensions = dimensions.reduce((r,dim,n)=>{
+                                if (n===col) r.push(Object.assign({},dim,{compressor:null}));
+                                else if (n>col) r.push(dim);
+                                return r;
+                            },[]);
+                            let newSet = this.arrange(sliceDimensions,slice);
+                            let nextDim = sliceDimensions[col+1];
+                            let restCompressed = sliceDimensions.every(dim=>dim.compressor===this._COMPRESS);
+                            let mappedSet = newSet.reduce((r,row)=>{
+                                let dimKey = row[dim.name];
+                                delete row[dim.name];
+                                if (nextDim) {
+                                    let nextKey = Object.keys(row)[0]; // works with compressed keys as well
+                                    if (nextDim.compressor === this._COMPRESS) {
+                                        if (restCompressed) r[dimKey+"."+row[nextKey]] = Object.values(row)[0];
+                                        else for (let [k,v] of Object.entries(row)) r[dimKey+"."+k] = v;
+                                    }
+                                    else r[dimKey+"."+row[nextKey]] = row;
+                                    delete row[nextKey];
+                                }
+                                else for (let [k,v] of Object.entries(row)) r[dimKey+"."+k] = v;
+                                return r;
+                            },{});
+                            Object.assign(dimStack[dimStack.length-1],mappedSet);
+                            index+=slice.length-1;
+                            break;
+                        }
+                        pinRecord = dimensions.reduce((r,dim,n)=>{
+                            if (n <= col) r[dim.name] = record[dim.name];return r;
+                        },{});
+                    // } else if (dim.compressor === this._SKIP) {
+                        // bypass this attribute
+                    } else {
+                        if (Object.keys(pinRecord).includes(key)) {
                             if (value !== pinRecord[key]) {
                                 if (Object.keys(dimStack[dimStack.length-1]).length===0) {
                                     dimStack[dimStack.length-2].pop();
                                 }
-                                dimStack = dimStack.slice(0,((++pinDepth)*2));
-                                let newSet = [{}];
-                                if (!dimStack[dimStack.length-1][key]) dimStack[dimStack.length-1][key] = {};
-                                dimStack[dimStack.length-1][key][value] = newSet;
-                                dimStack.push(newSet)
-                                dimStack.push(newSet[0]);
+                                dimStack = dimStack.slice(0,(col*2)+1);
+                                let newSet = {[key]:value};
+                                dimStack[dimStack.length-1].push(newSet);
+                                dimStack.push(newSet);
+                                pinRecord = {};
                             }
-                            pinRecord = this.dimensions.reduce((r,dim,n)=>{
-                                if (n <= col) r[dim.name] = record[dim.name];return r;
-                            },{});
                         } else {
-                            if (Object.keys(pinRecord).includes(key)) {
-                                if (value !== pinRecord[key]) {
-                                    if (Object.keys(dimStack[dimStack.length-1]).length===0) {
-                                        dimStack[dimStack.length-2].pop();
-                                    }
-                                    dimStack = dimStack.slice(0,(col*2)+1);
-                                    let newSet = {[key]:value};
-                                    dimStack[dimStack.length-1].push(newSet);
-                                    dimStack.push(newSet);
-                                    pinRecord = {};
-                                }
-                            } else {
-                                dimStack[dimStack.length - 1][key] = record[key];
-                            }
+                            dimStack[dimStack.length - 1][key] = record[key];
                         }
-                    } else {
-                        dimStack[dimStack.length-1][key] = record[key];
                     }
-                    col++;
+                } else {
+                    dimStack[dimStack.length-1][key] = record[key];
                 }
-                // for (let i=Object.keys(hotRecord).length;i<Object.keys(record).length;i++)  {
-                //     let dim = this.dimensions[i];
-                //     let key = Object.keys(record)[i]
-                //     if (dim && dim.compressor === this._ASSIGN) {
-                //         let slot = [{}];
-                //         dimStack[dimStack.length - 1][key] = {[record[key]]:slot};
-                //         dimStack.push(slot);
-                //         dimStack.push(slot[0]);
-                //         hotRecord = Object.keys(record).reduce((r,k,n)=>{
-                //             if (n <= dimIndex) r[k] = record[k];
-                //             return r;
-                //         },{});
-                //     } else {
-                //         dimStack[dimStack.length-1][key] = record[key];
-                //     }
-                // }
-                dimStack.pop();
-                let slot = {};
-                dimStack[dimStack.length-1].push(slot);
-                dimStack.push(slot);
-                index++;
+                col++;
             }
-            return dimStack[0];
+            dimStack.pop();
+            let slot = {};
+            dimStack[dimStack.length-1].push(slot);
+            dimStack.push(slot);
+            index++;
         }
-        function sliceDimension(data,depth) {
-            let baseValue = data[index];
-            let result = [];
-            while (index < data.length) {
-                if (this.dimensions.slice(0,depth).some(dim=>data[index][dim.name] !== baseValue[dim.name])) break;
-                result.push(Object.keys(data[index]).reduce((r, k, n) => {
-                    if (n > 0) r[k] = data[index][k];
-                    return r;
-                }, {}));
-                index++;
-            }
-            return result;
-        }
-        function slotDimension(data,depth) {
-            let baseValue = data[index];
-            let result = {};
-            while (index < data.length) {
-                if (this.dimensions.slice(0,depth).some(dim=>data[index][dim.name] !== baseValue[dim.name])) break;
-                let key = Object.values(data[index])[depth];
-                if (!result[key]) result[key] = [];
-                result[key] = arrange.call(this,sliceDimension.call(this,),depth+1);
-                i++;
-            }
-            return result;
+        this.clearStackTop(dimStack);
+        return dimStack[0];
+    }
+    clearStackTop(stack) {
+        if (Object.keys(stack[stack.length-1]).length===0 && stack[stack.length-2].length > 1) {
+            stack[stack.length-2].pop();
         }
     }
-    organize2(data) {
-        if (this.dimensions.length === 0) return data;
-        let index = 0;
-        let dimensions = this.dimensions;
-        data = data.sort((a,b)=>{
-            for (let i=0;i<dimensions.length;i++) {
-                if (a[dimensions[i].name]<b[dimensions[i].name]) return -1;
-                else if (a[dimensions[i].name]>b[dimensions[i].name]) return 1;
-            }
-            return 0;
-        })
-        return process.call(this,{});
-
-        function process(key) {
-            let result = [];
-            let resultRecord = {};
-            let position = Object.keys(key).length;
-            let pin = null;
-            while(index < data.length) {
-                let record = data[index];
-                // if the current record doesn't match the key return to the caller
-                for (let k of Object.keys(key)) {
-                    if (record[k] !== key[k]) return result;
-                }
-                // step through remaining dimensions
-                let compressorApplied = false;
-                let i = position;
-                while (i < dimensions.length) {
-                    if (dimensions[i].compressor === this._ASSIGN) {
-                        let result = process.call(this,getKey(record,i));
-                        if (i<dimensions.length-1) resultRecord[record[[dimensions[i].name]]] = result;
-                        else resultRecord[record[[dimensions[i].name]]] = result[0];
-                        compressorApplied = true;
-                        break;
-                    } else if (dimensions[i].compressor === this._COMPRESS) {
-                        pin = getKey(record,i-1);
-                        let result = process.call(this,getKey(record,i));
-                        for (let item of result) {
-                            let base = record[dimensions[i].name];
-                            if (i<dimensions.length-1) {
-                                if (dimensions[i+1].compressor===this._COMPRESS) {
-                                    for (let key in item) resultRecord[base+"."+key] = item[key];
-                                } else {
-                                    resultRecord[base+"."+item[dimensions[i+1].name]] = Object.keys(item).reduce((r,k)=>{
-                                        if (k !== dimensions[i+1].name) r[k] = item[k];
-                                        return r;
-                                    },{});
-                                }
-                            } else Object.keys(item).reduce((r,k)=>{resultRecord[base+"."+k] = item[k]},{});
-                        }
-                        compressorApplied = true;
-                        break;
-                    } else if (dimensions[i].compressor !== this._SKIP) {
-                        resultRecord[dimensions[i].name] = record[dimensions[i].name];
-                    }
-                    i++;
-                }
-                if (!compressorApplied) {
-                    for (let attr in record) {
-                        if (!dimensions.find(d=>d.name===attr)) resultRecord[attr] = record[attr];
-                    }
-                }
-                result.push(Object.assign({},resultRecord));
-                resultRecord = {};
-                if (result.length > 1 && dimensions[i] && dimensions[i].compressor === this._COMPRESS) {
-                    if (result[result.length-2][dimensions[i].name] === result[result.length-2][dimensions[i].name]) {
-                        Object.assign(result[result.length-2][dimensions[i].name],result.pop());
-                    }
-                }
-
-                let pinned = false;
-                if (pin) pinned = !Object.keys(pin).some(k=>(pin[k]!==resultRecord[k]))
-                if (!pinned) {
-                    pin = null;
-                }
-                index++;
-            }
-            if (Object.keys(resultRecord).length > 0) result.push(resultRecord);
-            return result;
-        }
-        function getKey(record,i) {
-            return [...Array(i+1).keys()].reduce((r,ii)=>{
-                r[dimensions[ii].name]=record[dimensions[ii].name];
+    sliceDimension(dimensions,data,index,col) {
+        let baseValue = data[index];
+        let result = [];
+        while (index < data.length) {
+            if (dimensions.slice(0,col).some(dim=>data[index][dim.name] !== baseValue[dim.name])) break;
+            result.push(Object.keys(data[index]).reduce((r, k, n) => {
+                if (n >= col) r[k] = data[index][k];
                 return r;
-            },{});
+            }, {}));
+            index++;
         }
+        return result;
     }
     /**
      * When we don't know if the string is intended to be a string or a number we
