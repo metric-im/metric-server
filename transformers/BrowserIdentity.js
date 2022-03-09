@@ -2,8 +2,7 @@ class BrowserIdentity {
     constructor(connector) {
         this.connector = connector;
         this.requires = [];
-        this.provides = ['weather','temperature','humidity','barometer','wind_speed',
-            'wind_direction','wind_gust','weather_visibility'];
+        this.provides = ['device','browser'];
     }
     async transform(context,event) {
         if (!context.ua) {
