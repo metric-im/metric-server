@@ -45,6 +45,7 @@ class Ping {
                     ip:req.ip,
                     ua:req.headers['user-agent']
                 },req.body._origin);
+                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
                 if (req.body._origin) delete req.body._origin;
                 if (this.connector.profile.profile==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
                 let parsedQuery = await this.castFields(req.query);
