@@ -16,7 +16,7 @@ class NameSpace {
             ns: (account,name)=>{
                 return {
                     _id: name,
-                    _pid: "ROOT",
+                    _pid: "root",
                     description: "",
                     availability: "private"
                 }
@@ -52,7 +52,6 @@ class NameSpace {
     }
     async get(account,id) {
         let query = [
-            {$lookup:{from:"field",localField:"_id",foreignField:"_ns",as:"fields"}},
             {$sort:{_id:1}}
         ];
         if (id) {
