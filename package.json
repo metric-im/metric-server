@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/metric-messenger/server#readme",
   "dependencies": {
-    "@metric-im/connector": "^1.0.6",
+    "@metric-im/connector": "^1.0.9",
     "@metric-im/identifier": "^1.0.0",
     "axios": "^0.26.0",
     "bcrypt": "^5.0.1",
