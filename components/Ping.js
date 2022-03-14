@@ -5,13 +5,23 @@ const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAA
 
 /**
  * Record an event. This route is public with a few caveats:
- * * Only validated sessions can record `_account`, otherwise default is "public"
- * * The first path parameter is recorded as _event. If not provide "ping" is the default
+ * * Only validated sessions can record `_account`
+ * * The first path parameter is the event namespace, _ns. If not provide "ping" is the default
  * * `_time` is always written by the system in UTC
  * * date (YYYY/MM/DD string), year, month, day, hour, minute and week are reserved and calculated
  *
- * All data sent via query string is recorded as strings. Use PUT method to provide specific
- * attribute types in the body via Json.
+ * A namespace can define its attributes and how to handle them. If not provided,
+ * all data sent via query string is recorded as strings. Use PUT method to provide
+ * native attribute types in the body via JSON.
+ *
+ * Server calls can populate _origin to establish context. _origin is
+ * parsed for ua (user agent), ip address, hostname and url. If not
+ * provided the express request values are used.
+ *
+ * Refiners are applied to the event according to the definition of
+ * the event namespace. A refiner can add or modify event attributes.
+ * Each refiner defines the attributes it requires and those it provides.
+ * This is used to sort the execution
  */
 class Ping {
     constructor(connector) {
@@ -19,9 +29,9 @@ class Ping {
         this.collection = this.connector.db.collection('event');
         this.fieldCollection = this.connector.db.collection('field');
         this.ontology = new (require('./Ontology'))(connector);
-        this.transformers = {};
+        this.refinery = {};
         for (let name of ['BrowserIdentity','LocationFromIP','Holiday','Weather']) {
-            this.transformers[name] = new (require('../transformers/'+name))(connector);
+            this.refinery[name] = new (require('../refinery/'+name))(connector);
         }
     }
 
@@ -31,7 +41,7 @@ class Ping {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         })
-        router.all("/:event?", async (req, res) => {
+        router.all("/:ns?", async (req, res) => {
             try {
                 // let fieldMap = await this.ontology.fieldMap(req._account);
                 // let dp = new DimPath(fieldMap);
@@ -54,12 +64,12 @@ class Ping {
                     parsedBody,
                     parsedQuery,
                     Parser.time(),
-                    {_account: req.account.id, _event: req.params.event || 'ping', _id: Id.new}
+                    {_account: req.account.id, _ns: req.params.ns || 'ping', _id: Id.new}
                 );
-                await this.transformers.LocationFromIP.transform(context,body);
-                await this.transformers.BrowserIdentity.transform(context,body);
-                await this.transformers.Holiday.transform(context,body);
-                await this.transformers.Weather.transform(context,body);
+                await this.refinery.LocationFromIP.process(context,body);
+                await this.refinery.BrowserIdentity.process(context,body);
+                await this.refinery.Holiday.process(context,body);
+                await this.refinery.Weather.process(context,body);
                 await this.collection.insertOne(body);
                 res.json(body);
             } catch (e) {

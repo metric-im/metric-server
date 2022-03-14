@@ -1,6 +1,6 @@
 let axios = require('axios');
 
-class Weather {
+class FuelPrice {
     constructor(connector) {
         this.connector = connector;
         this.requires = ['location'];
@@ -8,7 +8,7 @@ class Weather {
         this.key = this.connector.profile.secrets.DATAGOV_KEY;
         this.base = "https://api.eia.gov/category"
     }
-    async transform(context,event) {
+    async process(context,event) {
     }
 }
-module.exports = Weather;
+module.exports = FuelPrice;

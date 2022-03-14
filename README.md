@@ -13,7 +13,7 @@ Metric IM server for pinging, linking and reporting
 * weekday - Sunday, Monday, ...
 * date - YYYY-MM-DD
 * _time - now
-* _event - event name or "ping"
+* _ns - event name space or "ping"
 * _account - authorized account or "public"
 
 ## Deployment Settings

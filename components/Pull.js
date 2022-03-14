@@ -68,7 +68,7 @@ class Pull {
             // group metrics if provided
             if (metrics.length > 0) {
                 let group = {_id: {}};
-                let project = {_id: 0, '_event': '$_id._event'};
+                let project = {_id: 0, '_ns': '$_id._ns'};
                 for (let dim of dp.dimensions) {
                     if (dim.compressor === dp._SKIP) continue;
                     group._id[dim.name] = `$${dim.name}`

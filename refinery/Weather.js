@@ -9,7 +9,7 @@ class Weather {
         this.key = this.connector.profile.secrets.OPENWEATHER_KEY;
         this.base = "https://api.openweathermap.org/data/2.5/weather"
     }
-    async transform(context,event) {
+    async process(context,event) {
         if (!event.latitude || !event.longitude) return;
         let url = `${this.base}?lon=${event.latitude}&lat=${event.longitude}&appid=${this.key}&units=metric`;
         let result = await axios.get(url);

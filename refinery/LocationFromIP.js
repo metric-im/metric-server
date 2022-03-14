@@ -10,7 +10,7 @@ class LocationFromIP {
         this.requires=[];
         this.provides = ['location','country','region','timezone','city','latitude','longitude']
     }
-    async transform(context,event) {
+    async process(context,event) {
         let ip = context.ip.replace(/::ffff:/,"");
         // if (ip === "::1") ip = '208.157.149.67';
         let geo = this.geoip.lookup(ip);

@@ -4,7 +4,7 @@ class BrowserIdentity {
         this.requires = [];
         this.provides = ['device','browser'];
     }
-    async transform(context,event) {
+    async process(context,event) {
         if (!context.ua) {
             event.device = 'unknown';
             return;

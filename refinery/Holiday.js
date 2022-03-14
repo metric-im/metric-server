@@ -9,7 +9,7 @@ class Holiday {
         this.requires = ['country','state'];
         this.provides = ['holiday'];
     }
-    async transform(context,event) {
+    async process(context,event) {
         let location = {country:event.country,state:event.state};
         this.holiday.init(location.country);
         let result = this.holiday.isHoliday(event._time);

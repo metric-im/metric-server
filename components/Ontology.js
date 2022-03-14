@@ -64,15 +64,15 @@ class Ontology {
     async populate(accountId) {
         let query = [
             {$match:{_account:accountId}},
-            {$group:{_id:{account:"$_account",event:"$_event"}}},
+            {$group:{_id:{account:"$_account",event:"$_ns"}}},
             {$lookup:{
-                from:"events",
+                from:"event",
                 let:{a:"$_id.account",e:"$_id.event"},
                 as:"data",
                 pipeline:[
-                    {$match:{$expr:{$and:[{$eq:["$_account","$$a"]},{$eq:["$_event","$$e"]}]}}},
+                    {$match:{$expr:{$and:[{$eq:["$_account","$$a"]},{$eq:["_ns","$$e"]}]}}},
                     {$sample:{size:100}},
-                    {$project:{_id:0,account:"$_account",event:"$_event","arrayofkeyvalue":{$objectToArray:"$$ROOT"}}},
+                    {$project:{_id:0,account:"$_account",event:"_ns","arrayofkeyvalue":{$objectToArray:"$$ROOT"}}},
                     {$unwind:"$arrayofkeyvalue"},
                     {$project:{account:1,event:1,field:"$arrayofkeyvalue.k",type:{$type:"$arrayofkeyvalue.v"}}}
                 ]}},
