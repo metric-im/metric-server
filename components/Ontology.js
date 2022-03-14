@@ -96,7 +96,7 @@ class Ontology {
         result = result || {}
         let fields = (result.fields||[]).reduce((r,o)=>{r[o.name]={type:o.type};return r},{});
         fields = (result.derivedFields||[]).reduce((r,o)=>{r[o.name]={
-            type:o.type,code:o.code,language:o.language
+            type:o.type,code:o.code,interpreter:o.interpreter
         };return r},fields);
         return fields;
     }

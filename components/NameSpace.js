@@ -32,7 +32,7 @@ class NameSpace {
         }
     }
     async remove(account,id) {
-        if (!(await this.connector.acl.test.owner(account,id))) throw new Error("not authorized");
+        if (!(await this.connector.acl.test.owner({account:account.id},{namespace:id}))) throw new Error("not authorized");
         await this.data.remove(account,"namespace",id);
     }
     async put(account,body) {
@@ -62,7 +62,7 @@ class NameSpace {
             return result[0];
         } else {
             let ids = await this.connector.acl.get.all({account:account.id},"namespace");
-            ids = ids.map(a=>a.namespace);
+            ids = ids.map(a=>a._id.namespace);
             query.unshift({$match:{$or:[{available:0},{_id:{$in:ids}}]}});
             let result = await this.collection.aggregate(query).toArray();
             return result;

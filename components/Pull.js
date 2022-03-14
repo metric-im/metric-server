@@ -51,9 +51,9 @@ class Pull {
             statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
                 if (fieldMap[k].code && fieldNames.includes(k)) {
                     try {
-                        if (fieldMap[k].language==='json') {
+                        if (fieldMap[k].interpreter==='json') {
                             r[k] = Parser.objectify(ontology[k].code);
-                        } else if (fieldMap[k].language==='js') {
+                        } else if (fieldMap[k].interpreter==='js') {
                             let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
                             if (inputs) {
                                 inputs = inputs[1].split(',').reduce((r,a)=>{
