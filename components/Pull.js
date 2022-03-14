@@ -17,7 +17,7 @@ class Pull {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         });
-        router.all("/:format/:dimensions/:metrics?", async (req, res) => {
+        router.all("/:format/:ns/:dimensions/:metrics?", async (req, res) => {
             let {dimensions,metrics} = req.params;
             if (dimensions[0]==="*") dimensions = "";
             // parse metrics into name and method. Sum is default if method is not provided
@@ -35,8 +35,14 @@ class Pull {
 
             let statement = [];
             // build basic match filter
+            let namespace = {}
+            if (req.params.ns && req.params.ns !== '*' ) {
+                let parts = req.params.ns.split(',');
+                if (parts.length > 1) namespace._ns={$in:parts};
+                else namespace._ns = parts[0]
+            }
             statement.push({
-                $match: Object.assign({},
+                $match: Object.assign(namespace,
                 Parser.parseTimeFilter(req.query,"_time"),
                 Parser.objectify(req.query.where || {})
             )});
