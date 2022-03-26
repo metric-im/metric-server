@@ -6,7 +6,7 @@ class EventServer {
         let router = require('express').Router();
         // set routes services
         for (let name of ['Ping','Pull','Link','Ontology']) {
-            let comp = new (require('./components/'+name))(this.connector)
+            let comp = new (require('./handlers/'+name))(this.connector)
             router.use('/'+name.toLowerCase(),comp.routes());
         }
         return router;

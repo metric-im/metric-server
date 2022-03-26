@@ -1,5 +1,5 @@
 {
-  "name": "metric-messenger",
+  "name": "metric-server",
   "version": "1.2.0",
   "description": "ping, link, report",
   "main": "index.js",
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/metric-messenger/server.git"
+    "url": "git+https://github.com/metric-im/metric-server.git"
   },
   "author": "Michael Sprague",
   "license": "UNLICENSED",
   "bugs": {
-    "url": "https://github.com/metric-messenger/server/issues"
+    "url": "https://github.com/metric-im/metric-server/issues"
   },
-  "homepage": "https://github.com/metric-messenger/server#readme",
+  "homepage": "https://github.com/metric-im/metric-server#readme",
   "dependencies": {
     "@metric-im/connector": "^1.0.9",
     "@metric-im/identifier": "^1.0.0",
