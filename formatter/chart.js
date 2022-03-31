@@ -34,7 +34,7 @@ class Chart extends Formatter {
     async render(res,data) {
         let trayStyle = "position:relative;display:flex;height:90vh;width:90vh;margin:5vh"
         let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
-        let head = `<meta charset="utf-8"><script src="/lib/chartjs"></script>`;
+        let head = `<meta charset="utf-8"><script src="https://metric.im/lib/chartjs"></script>`;
         let body =
                 `<div style="${trayStyle}">
                     <div id="container" style="${containerStyle}"><canvas width=900 id="canvas"></canvas></div>

@@ -5,16 +5,6 @@ class Data {
     constructor(connector) {
         this.connector = connector;
     }
-    get acl() {
-        return {
-            account:{get:1,put:2,del:3},
-            user:{get:1,put:2,del:3},
-            namespace:{get:1,put:2,del:2},
-            field:{bound:{collection:'namespace',field:'_ns'},get:1,put:2,del:2},
-            query:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2},
-            wall:{bound:{collection:'account',field:'_account'},get:2,put:2,del:2}
-        }
-    }
     routes() {
         let router = require('express').Router();
         router.get('/:collection/:item?',async(req,res)=>{
@@ -94,8 +84,9 @@ class Data {
             if (body.length === 0) throw new Error("Empty data set");
             let writes = [];
             for (let o of body) {
+                if (!o._account) o._account = account.id;
                 writes.push({updateOne:{
-                    filter:{_id:(o._id||Identifier.new),_account:(o._account||account.id)},
+                    filter:{_id:(o._id||Identifier.new)},
                     update:constructModifier(o),
                     upsert:true
                 }});
@@ -103,7 +94,8 @@ class Data {
             let result = await this.connector.db.collection(collection).bulkWrite(writes);
             return {upsertedCount:result.upsertedCount,modifiedCount:result.modifiedCount};
         } else {
-            let selector = {_id:body._id||id||Identifier.new,_account:account.id};
+            let selector = {_id:body._id||id||Identifier.new};
+            if (!body._account) body._account = account.id;
             let modifier = constructModifier(body);
             let options = {returnNewDocument:true,upsert:true};
             let result = await this.connector.db.collection(collection).findOneAndUpdate(selector,modifier,options);
@@ -114,20 +106,12 @@ class Data {
             let modifier = {$set:{}};
             for (let a in doc) {
                 if (['$push','$pull','$addToSet','$unset','$set'].includes(a)) modifier[a] = doc[a];
-                else if (!['_id','_created','_createdBy'].includes(a)) modifier.$set[a] = doc[a];
+                else if (!['_id','_created','_createdBy','_account'].includes(a)) modifier.$set[a] = doc[a];
             }
             modifier.$set._modified = new Date();
-            modifier.$setOnInsert = {_created:new Date()};
+            modifier.$setOnInsert = {_created:new Date(),_account:doc._account};
             if (!doc._createdBy) modifier.$setOnInsert._createdBy = account.userId;
             return modifier;
-        }
-    }
-    test(collection) {
-
-        return {
-            get:()=>{
-                this.acl.get
-            }
         }
     }
 }

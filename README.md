@@ -100,12 +100,12 @@ npm i
    28  curl http://localhost
    29  cd sites-enabled/
    30  ls
-   31  sudo nano metric.conf
+   31  sudo nano pub-market.conf
    32  ls -al
    33  sudo rm default 
    34  history
    35  sudo systemctl start nginx
-   36  sudo nano /lib/systemd/system/metric.service
+   36  sudo nano /lib/systemd/system/pub-market.service
    37  cd /opt
    38  ls
    39  cd metric
