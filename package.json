@@ -13,7 +13,7 @@
     "url": "git+https://github.com/metric-im/metric-server.git"
   },
   "author": "Michael Sprague",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/metric-im/metric-server/issues"
   },
