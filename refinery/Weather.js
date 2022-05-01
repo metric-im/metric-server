@@ -4,8 +4,16 @@ class Weather {
     constructor(connector) {
         this.connector = connector;
         this.requires = ['location'];
-        this.provides = ['weather','temperature','humidity','barometer','wind_speed',
-            'wind_direction','wind_gust','weather_visibility'];
+        this.provides = [
+            {_id:'weather',dataType:"string",accumulator:"addToSet"},
+            {_id:'temperature',dataType:"float",accumulator:"avg"},
+            {_id:'humidity',dataType:"float",accumulator:"avg"},
+            {_id:'barometer',dataType:"float",accumulator:"avg"},
+            {_id:'wind_speed',dataType:"float",accumulator:"avg"},
+            {_id:'wind_direction',dataType:"float",accumulator:"avg"},
+            {_id:'wind_gust',dataType:"float",accumulator:"avg"},
+            {_id:'weather_visibility',dataType:"float",accumulator:"avg"},
+        ];
         this.key = this.connector.profile.secrets.OPENWEATHER_KEY;
         this.base = "https://api.openweathermap.org/data/2.5/weather"
     }

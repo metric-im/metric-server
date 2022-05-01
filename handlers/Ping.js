@@ -27,10 +27,9 @@ class Ping {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('event');
-        this.fieldCollection = this.connector.db.collection('field');
         this.ontology = new (require('./Ontology'))(connector);
         this.refinery = {};
-        for (let name of ['BrowserIdentity','LocationFromIP','Holiday','Weather']) {
+        for (let name of ['BrowserIdentity','LocationFromIp','Holiday','Weather','FuelPrice']) {
             this.refinery[name] = new (require('../refinery/'+name))(connector);
         }
     }
@@ -43,12 +42,8 @@ class Ping {
         })
         router.all("/:ns?", async (req, res) => {
             try {
-                // let fieldMap = await this.ontology.fieldMap(req._account);
-                // let dp = new DimPath(fieldMap);
-                // let parsedQuery = Object.keys(req.query).reduce((r,k)=>{
-                //     r[k] = dp.parseValue(k,req.query[k]);
-                //     return r;
-                // },{});
+                let ns = await this.ontology.nameSpace.get(req.account,req.params.ns)
+                let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
                 let context = Object.assign({
                     hostname:req.hostname,
                     url:req.url,
@@ -58,18 +53,17 @@ class Ping {
                 if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
                 if (req.body._origin) delete req.body._origin;
                 if (this.connector.profile.profile==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
-                let parsedQuery = await this.castFields(req.query);
-                let parsedBody = await this.castFields(req.body)
+                let parsedQuery = await this.castFields(req.query,fieldMap);
+                let parsedBody = await this.castFields(req.body,fieldMap)
                 let body = Object.assign({},
                     parsedBody,
                     parsedQuery,
                     Parser.time(),
                     {_account: req.account.id, _ns: req.params.ns || 'ping', _id: Id.new}
                 );
-                await this.refinery.LocationFromIP.process(context,body);
-                await this.refinery.BrowserIdentity.process(context,body);
-                await this.refinery.Holiday.process(context,body);
-                await this.refinery.Weather.process(context,body);
+                for (let refiner of ns.refinery) {
+                    await this.refinery[refiner].process(context,body);
+                }
                 await this.collection.insertOne(body);
                 res.json(body);
             } catch (e) {
@@ -79,9 +73,7 @@ class Ping {
         });
         return router;
     }
-    async castFields(o) {
-        let fields = await this.fieldCollection.find({_id:{$in:Object.keys(o)}}).toArray();
-        fields = fields.reduce((r,f)=>{r[f._id]=f;return r},[]);
+    async castFields(o,fields) {
         return Object.keys(o).reduce((r,k)=>{
             if (fields[k] && fields[k].dataType) {
                 if (['int','long','double','decimal'].includes(fields[k].dataType)) r[k] = Number(o[k]);

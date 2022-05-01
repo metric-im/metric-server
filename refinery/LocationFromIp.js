@@ -3,12 +3,20 @@
  * This is not precise and can be easily spoofed. For informational purposes it
  * can provide interesting data with no PII.
  */
-class LocationFromIP {
+class LocationFromIp {
     constructor(connector) {
         this.connector = connector;
         this.geoip = require('geoip-lite');
         this.requires=[];
-        this.provides = ['location','country','region','timezone','city','latitude','longitude']
+        this.provides = [
+            {_id:'location',dataType:"string",accumulator:"addToSet"},
+            {_id:'country',dataType:"string",accumulator:"addToSet"},
+            {_id:'region',dataType:"string",accumulator:"addToSet"},
+            {_id:'timezone',dataType:"string",accumulator:"addToSet"},
+            {_id:'city',dataType:"string",accumulator:"addToSet"},
+            {_id:'latitude',dataType:"float",accumulator:"avg"},
+            {_id:'longitude',dataType:"float",accumulator:"avg"}
+        ]
     }
     async process(context,event) {
         let ip = context.ip.replace(/::ffff:/,"");
@@ -26,4 +34,4 @@ class LocationFromIP {
         }
     };
 }
-module.exports = LocationFromIP;
+module.exports = LocationFromIp;

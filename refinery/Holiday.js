@@ -7,7 +7,9 @@ class Holiday {
         let Holidays = require('date-holidays');
         this.holiday = new Holidays();
         this.requires = ['country','state'];
-        this.provides = ['holiday'];
+        this.provides = [
+            {_id:'holiday',dataType:"string",accumulator:"addToSet"},
+        ];
     }
     async process(context,event) {
         let location = {country:event.country,state:event.state};

@@ -8,7 +8,6 @@ class Ontology {
     constructor(connector) {
         this.connector = connector;
         this.nameSpace = new NameSpace(connector);
-        this.fieldCollection = this.connector.db.collection('field');
         this.accountCollection = this.connector.db.collection('account');
     }
     routes() {
@@ -17,18 +16,16 @@ class Ontology {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         })
-        router.get("/populate",async(req,res)=>{
-            try {
-                let result = await this.populate(req.account.id,req.params.type);
-                res.json(result);
-            } catch(e) {
-                console.error(`Error populating`,e);
-                res.status(500).json({status:'error',message:`Error populating ontology data: ${e.message}`});
-            }
-        });
         router.get('/ns/:name?',async (req,res)=>{
             try {
                 return res.json(await this.nameSpace.get(req.account,req.params.name));
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
+            }
+        });
+        router.get('/ns/:name/fields',async (req,res)=>{
+            try {
+                return res.json(await this.nameSpace.fields(req.account,req.params.name));
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }
@@ -37,14 +34,6 @@ class Ontology {
             try {
                 req.body._id = req.params.name;
                 let result = await this.nameSpace.put(req.account,req.body);
-                res.json(result);
-            } catch(e) {
-                res.status(500).json({status:'error',message:`Error putting to namespace: ${e.message}`});
-            }
-        });
-        router.put('/ns/:name/fields',async (req,res)=>{
-            try {
-                let result = await this.nameSpace.putFields(req.account,req.params.name,req.body)
                 res.json(result);
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error putting to namespace: ${e.message}`});
@@ -61,44 +50,5 @@ class Ontology {
         return router
     }
 
-    async populate(accountId) {
-        let query = [
-            {$match:{_account:accountId}},
-            {$group:{_id:{account:"$_account",event:"$_ns"}}},
-            {$lookup:{
-                from:"event",
-                let:{a:"$_id.account",e:"$_id.event"},
-                as:"data",
-                pipeline:[
-                    {$match:{$expr:{$and:[{$eq:["$_account","$$a"]},{$eq:["_ns","$$e"]}]}}},
-                    {$sample:{size:100}},
-                    {$project:{_id:0,account:"$_account",event:"_ns","arrayofkeyvalue":{$objectToArray:"$$ROOT"}}},
-                    {$unwind:"$arrayofkeyvalue"},
-                    {$project:{account:1,event:1,field:"$arrayofkeyvalue.k",type:{$type:"$arrayofkeyvalue.v"}}}
-                ]}},
-            {$unwind:"$data"},
-            {$group:{_id:{account:"$_id.account",field:"$data.field",type:"$data.type"},events:{$addToSet:"$data.event"}}},
-            {$group:{_id:"$_id.account",fields:{$addToSet:{name:"$_id.field",type:"$_id.type",events:"$events"}}}},
-            {$project:{
-                _id:1,
-                fields:1,
-                events:{$reduce:{input:"$fields",initialValue:[],in:{$setUnion:["$$value","$$this.events"]}}},
-                _modified:new Date()
-            }},
-            // {$merge:"ontology"}
-        ];
-        return await this.connector.db.collection('events').aggregate(query).toArray();
-        // return {status:"success",message:"ontology updated"};
-    }
-    async fieldMap(accountId) {
-        if (!accountId) return {};
-        let result = await this.connector.db.collection('field').findOne({_id:accountId});
-        result = result || {}
-        let fields = (result.fields||[]).reduce((r,o)=>{r[o.name]={type:o.type};return r},{});
-        fields = (result.derivedFields||[]).reduce((r,o)=>{r[o.name]={
-            type:o.type,code:o.code,interpreter:o.interpreter
-        };return r},fields);
-        return fields;
-    }
 }
 module.exports = Ontology;

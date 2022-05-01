@@ -2,7 +2,10 @@ class BrowserIdentity {
     constructor(connector) {
         this.connector = connector;
         this.requires = [];
-        this.provides = ['device','browser'];
+        this.provides = [
+            {_id:'device',dataType:"string",accumulator:"addToSet"},
+            {_id:'browser',dataType:"string",accumulator:"addToSet"}
+        ];
     }
     async process(context,event) {
         if (!context.ua) {

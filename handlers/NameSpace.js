@@ -8,8 +8,7 @@ class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.fieldCollection = this.connector.db.collection('field');
-        this.data = new (require('./Data'))(connector);
+        this.data = this.connector.modules['data-server'];
     }
     get template() {
         return {
@@ -21,14 +20,6 @@ class NameSpace {
                     availability: "private"
                 }
             },
-            field: (ns,name)=>{
-                return {
-                    _id: name,
-                    _ns: ns,
-                    datatype:"string",
-                    description: ""
-                }
-            }
         }
     }
     async remove(account,id) {
@@ -42,20 +33,19 @@ class NameSpace {
             ns = Object.assign(this.template.ns(account),body);
             await this.connector.acl.assign.owner({account:account.id},{namespace:body._id});
         } else {
+            ns = body;
             if (!(await this.connector.acl.test.owner(
                 {account:account.id},{namespace:body._id}
             ))) throw new Error("not authorized");
         }
-
-        delete ns.fields; // use putFields
-        return await this.data.put(account,"namespace",body);
+        return await this.data.put(account,"namespace",ns);
     }
     async get(account,id) {
         let query = [
             {$sort:{_id:1}}
         ];
         if (id) {
-            let idExists = await this.connector.test.read({account:account.id},{namespace:id});
+            let idExists = await this.connector.acl.test.read({account:account.id},{namespace:id});
             if (idExists) query.unshift({$match:{_id:id}});
             else return [];
             let result = await this.collection.aggregate(query).toArray();
@@ -68,12 +58,31 @@ class NameSpace {
             return result;
         }
     }
-    async putFields(account,ns,fields=[]) {
-        if (!fields || fields.length===0) return ({status:'warning',message:'empty field set'});
-        if (!(await this.connector.acl.test.write({account:account.id},{namespace:ns}))) throw new Error("not authorized");
-        if (!Array.isArray(fields)) fields = [fields];
-        fields = fields.map(field=>Object.assign(field,{_ns:ns}));
-        return await this.data.put(account,"field",fields);
+    async fields(account,id) {
+        let ancestry = [];
+        let map = {};
+        while (id) {
+            let ns = await this.collection.findOne({_id:id});
+            if (!ns) break;
+            ancestry.push(ns);
+            id = ns._pid===id?null:ns._pid;
+        }
+        for (let source of ancestry) {
+            for (let name of source.refinery||[]) {
+                let refiner = new (require('../refinery/'+name))(this.connector);
+                if (refiner) {
+                    Object.assign(map,refiner.provides.reduce((r,o)=>{
+                        r[o._id] = o;
+                        return r;
+                    },{}));
+                }
+            }
+            Object.assign(map,source.fields.reduce((r,o)=>{
+                r[o._id] = o;
+                return r;
+            },{}));
+        }
+        return map;
     }
 }
 
