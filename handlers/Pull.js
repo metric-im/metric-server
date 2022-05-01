@@ -29,7 +29,7 @@ class Pull {
                 });
             } else metrics = [];
             // parse dimensions
-            let fieldMap = await this.ontology.fieldMap(req._account);
+            let fieldMap = await this.ontology.nameSpace.fields(req._account);
             let dp = new DimPath(fieldMap,req.query.sort);
             dp.parse(dimensions,metrics);
 
