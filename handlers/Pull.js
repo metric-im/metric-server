@@ -29,7 +29,7 @@ class Pull {
                 });
             } else metrics = [];
             // parse dimensions
-            let fieldMap = await this.ontology.nameSpace.fields(req._account);
+            let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
             let dp = new DimPath(fieldMap,req.query.sort);
             dp.parse(dimensions,metrics);
 
@@ -53,7 +53,7 @@ class Pull {
                     try {
                         if (fieldMap[k].interpreter==='json') {
                             r[k] = Parser.objectify(ontology[k].code);
-                        } else if (fieldMap[k].interpreter==='js') {
+                        } else if (fieldMap[k].interpreter==='js' || fieldMap[k].interpreter==='javascript') {
                             let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
                             if (inputs) {
                                 inputs = inputs[1].split(',').reduce((r,a)=>{
