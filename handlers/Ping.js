@@ -40,9 +40,9 @@ class Ping {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         })
-        router.all("/:ns?", async (req, res) => {
+        router.all("/:format/:ns", async (req, res) => {
             try {
-                let ns = await this.ontology.nameSpace.get(req.account,req.params.ns)
+                let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
                 let context = Object.assign({
                     hostname:req.hostname,
@@ -65,7 +65,24 @@ class Ping {
                     await this.refinery[refiner].process(context,body);
                 }
                 await this.collection.insertOne(body);
-                res.json(body);
+                switch(req.params.format) {
+                    case "json":
+                        res.json(body);
+                        break;
+                    case "pixel":
+                        res.set("Content-Type","image/gif");
+                        res.contentLength = 43;
+                        res.end(pixel,'binary');
+                        break;
+                    case "script":
+                        res.set("Content-Type","text/javascript");
+                        res.send("{}");
+                        break;
+                    case "silent":
+                    default:
+                        res.status(204).send();
+                        break;
+                }
             } catch (e) {
                 console.error(`Error pinging event`, e);
                 res.status(500).json({status: 'error', message: `Error invoking ${req.method} on data: ${e.message}`});

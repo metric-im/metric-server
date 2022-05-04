@@ -9,6 +9,7 @@ class NameSpace {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
         this.data = this.connector.modules['data-server'];
+        this.accessLevels = ['all','read','write','owner'];
     }
     get template() {
         return {
@@ -33,30 +34,29 @@ class NameSpace {
             ns = Object.assign(this.template.ns(account),body);
             await this.connector.acl.assign.owner({account:account.id},{namespace:body._id});
         } else {
-            ns = body;
-            if (!(await this.connector.acl.test.owner(
+            Object.assign(ns,body);
+            if (!(await this.connector.acl.test.write(
                 {account:account.id},{namespace:body._id}
-            ))) throw new Error("not authorized");
+            ))) return null
         }
         return await this.data.put(account,"namespace",ns);
     }
-    async get(account,id) {
-        let query = [
-            {$sort:{_id:1}}
-        ];
+    async get(account,id,level=1) {
+        let query = [{$sort:{_id:1}}];
         if (id) {
-            let idExists = await this.connector.acl.test.read({account:account.id},{namespace:id});
-            if (idExists) query.unshift({$match:{_id:id}});
-            else return [];
-            let result = await this.collection.aggregate(query).toArray();
-            return result[0];
+            let access = await this.connector.acl.test[this.accessLevels[level]]({account: account.id}, {namespace: id});
+            if (!access && account.super !== true) {
+                let ns = this.collection.findOne({_id:id});
+                if (!ns || ns.availability !== "public") return null;
+            }
+            query.unshift({$match: {_id: id}});
         } else {
-            let ids = await this.connector.acl.get.all({account:account.id},"namespace");
+            let ids = await this.connector.acl.get[this.accessLevels[level]]({account:account.id},"namespace");
             ids = ids.map(a=>a._id.namespace);
-            query.unshift({$match:{$or:[{available:0},{_id:{$in:ids}}]}});
-            let result = await this.collection.aggregate(query).toArray();
-            return result;
+            query.unshift({$match:{_id:{$in:ids}}});
         }
+        let result = await this.collection.aggregate(query).toArray();
+        return id?result[0]:result;
     }
     async fields(account,id) {
         let ancestry = [];
