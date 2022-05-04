@@ -43,6 +43,7 @@ class Ping {
         router.all("/:format/:ns", async (req, res) => {
             try {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
+                if (!ns) return res.status(401).send();
                 let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
                 let context = Object.assign({
                     hostname:req.hostname,
@@ -61,7 +62,7 @@ class Ping {
                     Parser.time(),
                     {_account: req.account.id, _ns: req.params.ns || 'ping', _id: Id.new}
                 );
-                for (let refiner of ns.refinery) {
+                for (let refiner of ns.refinery||[]) {
                     await this.refinery[refiner].process(context,body);
                 }
                 await this.collection.insertOne(body);

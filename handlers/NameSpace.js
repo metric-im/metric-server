@@ -46,7 +46,7 @@ class NameSpace {
         if (id) {
             let access = await this.connector.acl.test[this.accessLevels[level]]({account: account.id}, {namespace: id});
             if (!access && account.super !== true) {
-                let ns = this.collection.findOne({_id:id});
+                let ns = await this.collection.findOne({_id:id});
                 if (!ns || ns.availability !== "public") return null;
             }
             query.unshift({$match: {_id: id}});
