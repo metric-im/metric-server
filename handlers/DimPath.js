@@ -6,7 +6,9 @@ class DimPath {
         this.sort = sort || {};
         this.dimensions = [];
         this._ASSIGN = "assign";
+        this._OBJECTIFY = "objectify";
         this._COMPRESS = "compress";
+        this._COMBINE = "combine";
         this._SKIP = "skip";
     }
     get hasCompressors() {
@@ -17,10 +19,11 @@ class DimPath {
         if (typeof data === 'string') data = this.smartSplit(data);
         // parse dimension syntax for display and filter
         this.dimensions = data.map(k=>{
-            let match = k.match(/^([@+!])?([A-za-z0-9-_]+)[:]?(.*)/);
+            let match = k.match(/^([@+<!])?([A-za-z0-9-_]+)[:]?(.*)/);
             let compressor = null;
             if (match[1]==='@') compressor=this._ASSIGN;
-            else if (match[1]==='+') compressor=this._COMPRESS;
+            else if (match[1]==='+') compressor=this._COMBINE;
+            else if (match[1]==='<') compressor=this._COMPRESS;
             else if (match[1]==='!') compressor=this._SKIP;
             return {name:match[2],value:match[3],compressor:compressor,filters:[]};
         });
@@ -99,6 +102,29 @@ class DimPath {
         }
         return this.arrange(this.dimensions, organized);
     }
+    compress(dimensions,data) {
+        let dims = dimensions.reduce((r,dim)=>{r[dim.name]=dim;return r},{});
+        return data.map(record=>{
+            let result = {};
+            let nkey = "";
+            let nval = ""
+            for (let [key,val] of Object.entries(record)) {
+                if (dims[key] && dims[key].compressor === this._COMPRESS) {
+                    nkey += (nkey?".":"")+key;
+                    nval += (nval?".":".")+val;
+                } else {
+                    if (nval) result[nkey+"."+key]=nval+"."+val;
+                    else result[key] = val;
+                    if (dims[key]) {
+                        nkey = "";
+                        nval = "";
+                    }
+                }
+            }
+            return result;
+        })
+    }
+
     arrange(dimensions,data) {
         let dimStack = [];
         dimStack.push([]);
@@ -116,16 +142,31 @@ class DimPath {
                     if (dim.compressor === this._ASSIGN) {
                         if (value !== pinRecord[key]) {
                             this.clearStackTop(dimStack);
-                            dimStack = dimStack.slice(0,((++pinDepth)*2));
+                            dimStack = dimStack.slice(0, ((++pinDepth) * 2));
                             let newSet = [{}];
-                            if (!dimStack[dimStack.length-1][key]) dimStack[dimStack.length-1][key] = {};
-                            dimStack[dimStack.length-1][key][value] = newSet;
+                            if (!dimStack[dimStack.length - 1][key]) dimStack[dimStack.length - 1][key] = {};
+                            dimStack[dimStack.length - 1][key][value] = newSet;
                             dimStack.push(newSet)
                             dimStack.push(newSet[0]);
                         }
-                        pinRecord = dimensions.reduce((r,dim,n)=>{
-                            if (n <= col) r[dim.name] = record[dim.name];return r;
-                        },{});
+                        pinRecord = dimensions.reduce((r, dim, n) => {
+                            if (n <= col) r[dim.name] = record[dim.name];
+                            return r;
+                        }, {});
+                    } else if (dim.compressor === this._OBJECTIFY) {
+                        if (value !== pinRecord[key]) {
+                            this.clearStackTop(dimStack);
+                            dimStack = dimStack.slice(0, ((++pinDepth) * 2));
+                            let newSet = [{}];
+                            if (!dimStack[dimStack.length - 1][value]) dimStack[dimStack.length - 1][value] = {};
+                            dimStack[dimStack.length - 1][value] = newSet;
+                            dimStack.push(newSet)
+                            dimStack.push(newSet[0]);
+                        }
+                        pinRecord = dimensions.reduce((r, dim, n) => {
+                            if (n <= col) r[dim.name] = record[dim.name];
+                            return r;
+                        }, {});
                     } else if (dim.compressor === this._COMPRESS) {
                         if (value !== pinRecord[key]) {
                             this.clearStackTop(dimStack);

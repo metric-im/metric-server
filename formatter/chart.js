@@ -5,25 +5,23 @@ class Chart extends Formatter {
         super(dp,props);
         this.type = props[0];
     }
-    construct(data) {
+    construct(data,invert) {
         let color = new ColorFactory();
-        let labels = data.map(row=>row[this.dp.dimensions[0].name]);
-        // let compressedMetrics = this.dp.metrics.concat(data.slice(1).reduce((r,row)=>{
-        //     for (let {key,value} of Object.entries(row)) {
-        //         let divider = key.lastIndexOf('.');
-        //         if (divider >= 0) {
-        //             let metric = key.substr(divider+1);
-        //             let dim = key.substr(0,divider);
-        //             r.push={name:metric,title:dim+" "+metric,method:'sum'};
-        //         }
-        //     }
-        // },[]))
+        let colorSet = invert?data.reduce((r,d)=>{
+            r.subtle.push(color.subtle());
+            r.solid.push(color.solid());
+            color.next();
+            return r;
+        },{subtle:[],solid:[]}):null;
+        let labels = data.map(row=>{
+            return this.dp.dimensions.map(d=>row[d.name]).join('.');
+        });
         let datasets=this.dp.metrics.map(metric=>{
             let dataset =  {
                 label:metric.name+(metric.method!=='sum'?` (${metric.method})`:""),
                     data:data.map(row=>row[metric.name]),
-                backgroundColor:color.subtle(),
-                borderColor:color.solid(),
+                backgroundColor:invert?colorSet.subtle:color.subtle(),
+                borderColor:invert?colorSet.solid:color.solid(),
                 borderWidth:1,
             }
             color.next();
@@ -32,6 +30,7 @@ class Chart extends Formatter {
         return {labels:labels,datasets:datasets};
     }
     async render(res,data) {
+        let invert = ['pie','doughnut','polarArea'].includes(this.type);
         let trayStyle = "position:relative;display:flex;height:90vh;width:90vh;margin:5vh"
         let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
         let head = `<meta charset="utf-8"><script src="https://metric.im/lib/chartjs"></script>`;
@@ -41,7 +40,7 @@ class Chart extends Formatter {
                 </div>`;
         let control = {
             type:this.type||'bar',
-            data:this.construct(data),
+            data:this.construct(data,invert),
             options:{scales:{y:{beginAtZero:true}},maintainAspectRatio:false}
         }
         let script = `

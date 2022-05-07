@@ -17,7 +17,7 @@ class Pull {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         });
-        router.all("/:format/:ns/:dimensions/:metrics?", async (req, res) => {
+        router.all("/:format/:ns/:dimensions/:metrics", async (req, res) => {
             let {dimensions,metrics} = req.params;
             if (dimensions[0]==="*") dimensions = "";
             // parse metrics into name and method. Sum is default if method is not provided
@@ -31,7 +31,11 @@ class Pull {
             // parse dimensions
             let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
             let dp = new DimPath(fieldMap,req.query.sort);
-            dp.parse(dimensions,metrics);
+            try {
+                dp.parse(dimensions,metrics);
+            } catch(e) {
+                res.status(400).send('malformed request');
+            }
 
             let statement = [];
             // build basic match filter
