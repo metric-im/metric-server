@@ -45,44 +45,55 @@ class Ping {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
                 let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
+                if (!fieldMap) fieldMap = {};
                 let context = Object.assign({
                     hostname:req.hostname,
                     url:req.url,
                     ip:req.ip,
                     ua:req.headers['user-agent']
                 },req.body._origin);
-                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
-                if (req.body._origin) delete req.body._origin;
                 if (this.connector.profile.profile==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
-                let parsedQuery = await this.castFields(req.query,fieldMap);
-                let parsedBody = await this.castFields(req.body,fieldMap)
-                let body = Object.assign({},
-                    parsedBody,
-                    parsedQuery,
-                    Parser.time(),
-                    {_account: req.account.id, _ns: req.params.ns || 'ping', _id: Id.new}
-                );
-                for (let refiner of ns.refinery||[]) {
-                    await this.refinery[refiner].process(context,body);
-                }
-                await this.collection.insertOne(body);
-                switch(req.params.format) {
-                    case "json":
-                        res.json(body);
-                        break;
-                    case "pixel":
-                        res.set("Content-Type","image/gif");
-                        res.contentLength = 43;
-                        res.end(pixel,'binary');
-                        break;
-                    case "script":
-                        res.set("Content-Type","text/javascript");
-                        res.send("{}");
-                        break;
-                    case "silent":
-                    default:
-                        res.status(204).send();
-                        break;
+                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
+                if (Array.isArray(req.body)) {
+                    let writes = [];
+                    for (let o of req.body) {
+                        o = this.castFields(o,fieldMap);
+                        let doc = Object.assign(o,Parser.time(o._time),o._origin,{_account: req.account.id, _ns: req.params.ns, _id: Id.new});
+                        if (o._origin) delete o._origin;
+                        for (let refiner of ns.refinery||[]) await this.refinery[refiner].process(context,doc);
+                        writes.push({insertOne:{document:doc}});
+                    }
+                    let result = await this.collection.bulkWrite(writes);
+                    res.json(result);
+                } else {
+                    let o = Object.assign(this.castFields(req.body,fieldMap),this.castFields(req.query,fieldMap));
+                    let body = Object.assign(o,Parser.time(o._time),req.body._origin,{_account: req.account.id, _ns: req.params.ns, _id: Id.new});
+                    if (req.body._origin) delete req.body._origin;
+                    for (let refiner of ns.refinery||[]) await this.refinery[refiner].process(context,body);
+                    await this.collection.insertOne(body);
+                    switch(req.params.format) {
+                        case "json":
+                            res.json(body);
+                            break;
+                        case "pixel":
+                            res.set("Content-Type","image/gif");
+                            res.contentLength = 43;
+                            res.end(pixel,'binary');
+                            break;
+                        case "script":
+                            res.set("Content-Type","text/javascript");
+                            res.send("{}");
+                            break;
+                        case 'table':
+                            res.set("Content-Type","text/html");
+                            let data = Object.keys(body).sort().map(key=>`<tr><td>${key}: </td><td><b>${body[key]}</b></td></tr>`);
+                            res.send(`<html><body><table>${data.join("")}</table></body></html>`);
+                            break;
+                        case "silent":
+                        default:
+                            res.status(204).send();
+                            break;
+                    }
                 }
             } catch (e) {
                 console.error(`Error pinging event`, e);
@@ -91,7 +102,7 @@ class Ping {
         });
         return router;
     }
-    async castFields(o,fields) {
+    castFields(o,fields) {
         return Object.keys(o).reduce((r,k)=>{
             if (fields[k] && fields[k].dataType) {
                 if (['int','long','double','decimal'].includes(fields[k].dataType)) r[k] = Number(o[k]);
