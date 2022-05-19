@@ -3,15 +3,15 @@
  * that can be employed by an event. Custom ontologies can be defined
  * to accounts. A common ontology is shared across the system.
  */
-let NameSpace = require('./NameSpace');
-class Ontology {
+import NameSpace from "./NameSpace.mjs";
+import express from "express";
+export default class Ontology {
     constructor(connector) {
         this.connector = connector;
         this.nameSpace = new NameSpace(connector);
-        this.accountCollection = this.connector.db.collection('account');
     }
     routes() {
-        let router = require('express').Router();
+        let router = express.Router();
         router.use((req,res,next)=>{
             if (req.account && req.account.id) next();
             else res.status(401).send();
@@ -49,4 +49,3 @@ class Ontology {
         return router
     }
 }
-module.exports = Ontology;

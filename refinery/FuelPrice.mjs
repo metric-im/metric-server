@@ -1,14 +1,12 @@
-let axios = require('axios');
-
-class FuelPrice {
+import axios from 'axios';
+export default class FuelPrice {
     constructor(connector) {
         this.connector = connector;
         this.requires = ['location'];
         this.provides = [];
-        this.key = this.connector.profile.secrets.DATAGOV_KEY;
+        this.key = this.connector.profile.DATAGOV_KEY;
         this.base = "https://api.eia.gov/category"
     }
     async process(context,event) {
     }
 }
-module.exports = FuelPrice;

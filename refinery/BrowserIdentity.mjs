@@ -1,4 +1,4 @@
-class BrowserIdentity {
+export default class BrowserIdentity {
     constructor(connector) {
         this.connector = connector;
         this.requires = [];
@@ -42,4 +42,3 @@ class BrowserIdentity {
         }
     }
 }
-module.exports = BrowserIdentity;

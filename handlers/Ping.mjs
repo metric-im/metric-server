@@ -1,8 +1,3 @@
-let Parser = require('./Parser');
-let Id = require('@metric-im/identifier');
-const DimPath = require("./DimPath");
-const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
-
 /**
  * Record an event. This route is public with a few caveats:
  * * Only validated sessions can record `_account`
@@ -23,19 +18,21 @@ const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAA
  * Each refiner defines the attributes it requires and those it provides.
  * This is used to sort the execution
  */
-class Ping {
+import Parser from './Parser.mjs';
+import Ontology from './Ontology.mjs';
+import NameSpace from './NameSpace.mjs';
+import express from 'express';
+const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
+
+export default class Ping {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('event');
-        this.ontology = new (require('./Ontology'))(connector);
-        this.refinery = {};
-        for (let name of ['BrowserIdentity','LocationFromIp','Holiday','Weather','FuelPrice']) {
-            this.refinery[name] = new (require('../refinery/'+name))(connector);
-        }
+        this.ontology = new Ontology(connector);
     }
 
     routes() {
-        let router = require('express').Router();
+        let router = express.Router();
         router.use((req,res,next)=>{
             if (req.account && req.account.id) next();
             else res.status(401).send();
@@ -58,18 +55,18 @@ class Ping {
                     let writes = [];
                     for (let o of req.body) {
                         o = this.castFields(o,fieldMap);
-                        let doc = Object.assign(o,Parser.time(o._time),o._origin,{_account: req.account.id, _ns: req.params.ns, _id: Id.new});
+                        let doc = Object.assign(o,Parser.time(o._time),o._origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
                         if (o._origin) delete o._origin;
-                        for (let refiner of ns.refinery||[]) await this.refinery[refiner].process(context,doc);
+                        for (let refiner of ns.refinery||[]) await NameSpace.refinery[refiner].process(context,doc);
                         writes.push({insertOne:{document:doc}});
                     }
                     let result = await this.collection.bulkWrite(writes);
                     res.json(result);
                 } else {
                     let o = Object.assign(this.castFields(req.body,fieldMap),this.castFields(req.query,fieldMap));
-                    let body = Object.assign(o,Parser.time(o._time),req.body._origin,{_account: req.account.id, _ns: req.params.ns, _id: Id.new});
+                    let body = Object.assign(o,Parser.time(o._time),req.body._origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
                     if (req.body._origin) delete req.body._origin;
-                    for (let refiner of ns.refinery||[]) await this.refinery[refiner].process(context,body);
+                    for (let refiner of ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
                     await this.collection.insertOne(body);
                     switch(req.params.format) {
                         case "json":
@@ -105,7 +102,7 @@ class Ping {
     castFields(o,fields) {
         return Object.keys(o).reduce((r,k)=>{
             if (fields[k] && fields[k].dataType) {
-                if (['int','long','double','decimal'].includes(fields[k].dataType)) r[k] = Number(o[k]);
+                if (['int','integer','long','double','decimal'].includes(fields[k].dataType)) r[k] = Number(o[k]);
                 else r[k] = o[k];
             } else {
                 // else guess
@@ -115,5 +112,3 @@ class Ping {
         },{})
     }
 }
-
-module.exports = Ping;

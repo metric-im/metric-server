@@ -1,14 +1,13 @@
-const Identifier = require("@metric-im/identifier");
-
 /**
  * NameSpace defines a collection of event fields for a domain
  * @type {Data}
  */
-class NameSpace {
+let _refineryModules = {};
+export default class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.data = this.connector.modules['data-server'];
+        this.data = this.connector.modules.DataServer;
         this.accessLevels = ['all','read','write','owner'];
     }
     get template() {
@@ -69,7 +68,7 @@ class NameSpace {
         }
         for (let source of ancestry) {
             for (let name of source.refinery||[]) {
-                let refiner = new (require('../refinery/'+name))(this.connector);
+                let refiner = NameSpace.refinery[name];
                 if (refiner) {
                     Object.assign(map,refiner.provides.reduce((r,o)=>{
                         r[o._id] = o;
@@ -84,6 +83,6 @@ class NameSpace {
         }
         return map;
     }
+    // populated when the server is minted
+    static refinery = {};
 }
-
-module.exports = NameSpace;

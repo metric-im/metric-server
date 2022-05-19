@@ -1,6 +1,6 @@
-let axios = require('axios');
+import axios from 'axios';
 
-class Weather {
+export default class Weather {
     constructor(connector) {
         this.connector = connector;
         this.requires = ['location'];
@@ -14,7 +14,7 @@ class Weather {
             {_id:'wind_gust',dataType:"float",accumulator:"avg"},
             {_id:'weather_visibility',dataType:"float",accumulator:"avg"},
         ];
-        this.key = this.connector.profile.secrets.OPENWEATHER_KEY;
+        this.key = this.connector.profile.OPENWEATHER_KEY;
         this.base = "https://api.openweathermap.org/data/2.5/weather"
     }
     async process(context,event) {
@@ -34,4 +34,3 @@ class Weather {
         }
     }
 }
-module.exports = Weather;

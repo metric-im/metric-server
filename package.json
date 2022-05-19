@@ -2,10 +2,10 @@
   "name": "metric-server",
   "version": "1.2.0",
   "description": "ping, link, report",
-  "main": "index.js",
+  "main": "index.mjs",
   "scripts": {
     "cli": "node -r dotenv/config cli.js",
-    "start": "node -r dotenv/config index.js",
+    "start": "node -r dotenv/config index.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

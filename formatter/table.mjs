@@ -1,6 +1,6 @@
-let Formatter = require('./formatter');
+import Formatter from './formatter.mjs';
 
-class Table extends Formatter {
+export default class Table extends Formatter {
     constructor(dp,props) {
         super(dp,props);
     }
@@ -62,4 +62,3 @@ th {
 `;
     }
 }
-module.exports = Table;

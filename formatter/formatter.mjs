@@ -1,4 +1,4 @@
-class Formatter {
+export default class Formatter {
     constructor(dp,props) {
         this.dp = dp;
         if (props) this.options = props.reduce((r,p)=>{r[p]=true;return r},{});
@@ -78,4 +78,3 @@ class Formatter {
         }
     }
 }
-module.exports = Formatter;

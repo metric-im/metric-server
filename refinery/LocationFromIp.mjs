@@ -3,10 +3,10 @@
  * This is not precise and can be easily spoofed. For informational purposes it
  * can provide interesting data with no PII.
  */
-class LocationFromIp {
+import geoIp from 'geoip-lite';
+export default class LocationFromIp {
     constructor(connector) {
         this.connector = connector;
-        this.geoip = require('geoip-lite');
         this.requires=[];
         this.provides = [
             {_id:'location',dataType:"string",accumulator:"addToSet"},
@@ -20,7 +20,7 @@ class LocationFromIp {
     }
     async process(context,event) {
         let ip = context.ip.replace(/::ffff:/,"");
-        let geo = this.geoip.lookup(ip);
+        let geo = geoIp.lookup(ip);
         if (geo) {
             Object.assign(event,{
                 country: geo.country,
@@ -33,4 +33,3 @@ class LocationFromIp {
         }
     };
 }
-module.exports = LocationFromIp;

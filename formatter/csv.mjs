@@ -1,6 +1,6 @@
-let Formatter = require('./formatter');
+import Formatter from './formatter.mjs';
 
-class CSV extends Formatter {
+export default class CSV extends Formatter {
     constructor(dp,props) {
         super(dp,props);
     }
@@ -33,4 +33,3 @@ class CSV extends Formatter {
         }
     }
 }
-module.exports = CSV;

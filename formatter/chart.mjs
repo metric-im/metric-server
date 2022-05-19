@@ -1,6 +1,6 @@
-let Formatter = require('./formatter');
+import Formatter from './formatter.mjs';
 
-class Chart extends Formatter {
+export default class Chart extends Formatter {
     constructor(dp,props) {
         super(dp,props);
         this.type = props[0];
@@ -86,4 +86,3 @@ class ColorFactory {
         return `rgba(${color.r},${color.g},${color.b},${color.a})`
     }
 }
-module.exports = Chart;

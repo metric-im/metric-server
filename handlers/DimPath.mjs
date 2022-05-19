@@ -1,6 +1,6 @@
-const Parser = require("./Parser");
+import Parser from './Parser.mjs';
 
-class DimPath {
+export default class DimPath {
     constructor(fieldMap,sort) {
         this.fieldMap = fieldMap;
         this.sort = sort || {};
@@ -270,4 +270,3 @@ class DimPath {
         else return (/^[.0-9]*$/.test(val))?Number(val):val;
     }
 }
-module.exports = DimPath;

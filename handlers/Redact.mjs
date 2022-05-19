@@ -1,20 +1,18 @@
 /**
  * Redact an event. Admins can remove events posted with ping
  */
-let moment = require('moment');
-class Redact {
+import moment from 'moment';
+import express from 'express';
+import Ontology from './Ontology.mjs';
+export default class Redact {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('event');
-        this.ontology = new (require('./Ontology'))(connector);
-        this.refinery = {};
-        for (let name of ['BrowserIdentity','LocationFromIp','Holiday','Weather','FuelPrice']) {
-            this.refinery[name] = new (require('../refinery/'+name))(connector);
-        }
+        this.ontology = new Ontology(connector);
     }
 
     routes() {
-        let router = require('express').Router();
+        let router = express.Router();
         router.use((req,res,next)=>{
             if (req.account && req.account.id) next();
             else res.status(401).send();
@@ -43,5 +41,3 @@ class Redact {
         return router;
     }
 }
-
-module.exports = Redact;

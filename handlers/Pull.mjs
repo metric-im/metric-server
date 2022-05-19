@@ -1,18 +1,19 @@
-const Parser = require('./Parser');
-const DimPath = require("./DimPath");
-
 /**
  * Pull for events using aggregation
  */
-class Pull {
+import Parser from './Parser.mjs';
+import DimPath from './DimPath.mjs';
+import Ontology from './Ontology.mjs';
+import express from 'express';
+export default class Pull {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('event');
-        this.ontology = new (require('./Ontology'))(connector);
+        this.ontology = new Ontology(connector);
     }
 
     routes() {
-        let router = require('express').Router();
+        let router = express.Router();
         router.use((req,res,next)=>{
             if (req.account && req.account.id) next();
             else res.status(401).send();
@@ -112,9 +113,9 @@ class Pull {
             }
             try {
                 let format = req.params.format.split('.');
-                let module = require('../formatter/'+format[0].toLowerCase()+".js");
+                let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
                 if (!module) res.status(400).json({message:'format unavailable'});
-                let formatter = new module(dp,format.slice(1));
+                let formatter = new module.default(dp,format.slice(1));
                 await formatter.render(res,results);
             } catch(e) {
                 console.error(e);
@@ -143,5 +144,3 @@ function processRatio(metric,results) {
         }
     }
 }
-
-module.exports = Pull;

@@ -1,6 +1,6 @@
-let Formatter = require('./formatter');
+import Formatter from './formatter.mjs';
 
-class JSON extends Formatter {
+export default class JSON extends Formatter {
     constructor(dp,props) {
         super(dp,props);
     }
@@ -9,4 +9,3 @@ class JSON extends Formatter {
         else res.json(data);
     }
 }
-module.exports = JSON;
