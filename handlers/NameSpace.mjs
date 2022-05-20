@@ -7,7 +7,7 @@ export default class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.data = this.connector.modules.DataServer;
+        this.data = this.connector.modules.DataServer.module;
         this.accessLevels = ['all','read','write','owner'];
     }
     get template() {
