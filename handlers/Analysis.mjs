@@ -54,7 +54,7 @@ export default class Analysis {
             {$project:{"arrayofkeyvalue":{$objectToArray:"$$ROOT"}}},
             {$unwind:"$arrayofkeyvalue"},
             {$group:{_id:{name:"$arrayofkeyvalue.k",type:{$type:"$arrayofkeyvalue.v"}},sampleArray:{$addToSet:"$arrayofkeyvalue.v"}}},
-            {$set:{sample:{$function:{body:"function(a){return a.join(',')}",args:["$sampleArray"],lang:"js"}}}},
+            {$set:{sample:{$function:{body:"function(a){return a.join(', ')}",args:["$sampleArray"],lang:"js"}}}},
             {$project:{_id:0,name:"$_id.name",type:"$_id.type",sample:"$sample"}},
             {$sort:{name:1}}
         ];
