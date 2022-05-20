@@ -4,6 +4,7 @@ import Pull from './handlers/Pull.mjs';
 import Ontology from './handlers/Ontology.mjs';
 import NameSpace from './handlers/NameSpace.mjs';
 import Redact from './handlers/Redact.mjs';
+import Analysis from './handlers/Analysis.mjs';
 import fs from "fs";
 import path from "path";
 import {fileURLToPath} from "url";
@@ -31,6 +32,7 @@ export default class MetricServer {
         router.use('/pull',(new Pull(this.connector)).routes());
         router.use('/ontology',(new Ontology(this.connector)).routes());
         router.use('/redact',(new Redact(this.connector)).routes());
+        router.use('/analysis',(new Analysis(this.connector)).routes());
         return router;
     }
 }
