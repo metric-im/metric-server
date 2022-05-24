@@ -13,16 +13,26 @@ export default class MetricServer {
         this.connector = connector;
         this.rootPath = path.dirname(fileURLToPath(import.meta.url));
         this.refinery = {};
+        this.accumulators = {};
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
-        let files = fs.readdirSync(instance.rootPath+"/refinery");
-        for (let file of files) {
+        let refiners = fs.readdirSync(instance.rootPath+"/refinery");
+        for (let file of refiners) {
             let Refiner = await import('./refinery/'+file);
             let name = file.replace(/(\.mjs|\.js)/,"");
             instance.refinery[name] = new Refiner.default(connector);
         }
+        let accumulators = fs.readdirSync(instance.rootPath+"/accumulators");
+        for (let file of accumulators) {
+            let Accumulator = await import('./accumulators/'+file);
+            for (let key of Object.keys(Accumulator.default.functions)) {
+                Accumulator.default.functions[key] = Accumulator.default.functions[key].toString();
+            }
+            instance.accumulators[Accumulator.name] = Accumulator.default;
+        }
         NameSpace.refinery = instance.refinery;
+        NameSpace.accumulators = instance.accumulators;
         return instance;
     }
     routes() {

@@ -23,9 +23,16 @@ export default class Ontology {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }
         });
-        router.get('/ns/:id/fields',async (req,res)=>{
+        router.get('/ns/:id/fields',async (req ,res)=>{
             try {
                 res.json(await this.nameSpace.fields(req.account,req.params.id));
+            } catch(e) {
+                res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
+            }
+        });
+        router.get('/ns/:id/accumulators',async (req,res)=>{
+            try {
+                res.json(await this.nameSpace.accumulators(req.account,req.params.id));
             } catch(e) {
                 res.status(500).json({status:'error',message:`Error getting namespace: ${e.message}`});
             }

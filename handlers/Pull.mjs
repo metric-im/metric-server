@@ -20,64 +20,74 @@ export default class Pull {
         });
         router.all("/:format/:ns/:dimensions/:metrics", async (req, res) => {
             try {
+                // load namespaces
+                let namespaces = req.params.ns.split(',');
+                let accumulators = {};
+                for (let i=0;i<namespaces.length;i++) {
+                    namespaces[i] = await this.ontology.nameSpace.get(req.account,namespaces[i],1);
+                    if (!namespaces[i]) return res.status(401).send();
+                    Object.assign(accumulators,await this.ontology.nameSpace.accumulators(req.account,namespaces[i]))
+                }
                 let {dimensions,metrics} = req.params;
-                if (dimensions[0]==="*") dimensions = "";
-                // parse metrics into name and method. Sum is default if method is not provided
+                // parse fieldMap from the namespaces requested (usually just one)
+                let fieldMap = {};
+                for (let ns of namespaces) {
+                    Object.assign(fieldMap,await this.ontology.nameSpace.fields(req.account,ns));
+                }
+                // parse metrics into input field(s) and method. Sum is default if method is not provided
                 if (metrics) {
                     if (typeof metrics === 'string') metrics = metrics.split(',');
                     metrics = metrics.map(m => {
                         let parts = m.split(':');
-                        return {name: parts[0], method: parts[1] || 'sum'}
+                        let name = parts[0].startsWith('(')?parts[0].slice(1,-1).split(','):[parts[0]];
+                        let method = fieldMap[name]?fieldMap[name].accumulator:(parts[1]||'sum');
+                        return {name: name, method: method}
                     });
                 } else metrics = [];
-                // parse dimensions
-                let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
-                let dp = new DimPath(fieldMap,req.query.sort);
+                // parse dimensions with DimensionPath helper
+                let dp = new DimPath(fieldMap,metrics);
                 try {
                     dp.parse(dimensions,metrics);
                 } catch(e) {
                     res.status(400).send('malformed request');
                 }
 
+                // Construct the aggregation query
                 let statement = [];
                 // build basic match filter
-                let namespace = {}
-                if (req.params.ns && req.params.ns !== '*' ) {
-                    let parts = req.params.ns.split(',');
-                    if (parts.length > 1) namespace._ns={$in:parts};
-                    else namespace._ns = parts[0]
-                }
+                let namespaceFilter = {_ns:{$in:namespaces.map(ns=>ns._id)}};
                 statement.push({
-                    $match: Object.assign(namespace,
+                    $match: Object.assign(namespaceFilter,
                         Parser.parseTimeFilter(req.query,"_time"),
                         Parser.objectify(req.query.where || {})
-                    )});
+                    )
+                });
                 // add derived fields
                 let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name));
                 statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
-                        if (fieldMap[k].code && fieldNames.includes(k)) {
-                            try {
-                                if (fieldMap[k].interpreter==='json') {
-                                    r[k] = Parser.objectify(ontology[k].code);
-                                } else if (fieldMap[k].interpreter==='js' || fieldMap[k].interpreter==='javascript') {
-                                    let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
-                                    if (inputs) {
-                                        inputs = inputs[1].split(',').reduce((r,a)=>{
-                                            if (a) r.push('$'+a);
-                                            return r;
-                                        },[]);
-                                        r[k] = {$function:{body:fieldMap[k].code, args:inputs, lang:"js"}}
-                                    }
+                    if (fieldMap[k].code && fieldNames.includes(k)) {
+                        try {
+                            if (fieldMap[k].interpreter==='json') {
+                                r[k] = Parser.objectify(ontology[k].code);
+                            } else if (fieldMap[k].interpreter==='js' || fieldMap[k].interpreter==='javascript') {
+                                let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
+                                if (inputs) {
+                                    inputs = inputs[1].split(',').reduce((r,a)=>{
+                                        if (a) r.push('$'+a);
+                                        return r;
+                                    },[]);
+                                    r[k] = {$function:{body:fieldMap[k].code, args:inputs, lang:"js"}}
                                 }
-                            } catch(e) {
-                                throw new Error(`Could not parse derived field ${k}, ${e.message}`);
                             }
+                        } catch(e) {
+                            throw new Error(`Could not parse derived field ${k}, ${e.message}`);
                         }
-                        return r;
-                    },{})});
-                // add dimension filter
+                    }
+                    return r;
+                },{})});
+                // add any filters built into the dimensions request
                 if (Object.keys(dp.filters).length > 0) statement.push({$match:dp.filters});
-                // group metrics if provided
+                // group by metrics if provided
                 if (metrics.length > 0) {
                     let group = {_id: {}};
                     let project = {_id: 0, '_ns': '$_id._ns'};
@@ -87,31 +97,35 @@ export default class Pull {
                         project[dim.name] = '$_id.' + dim.name;
                     }
                     for (let metric of metrics) {
-                        if (metric.name === '_count') {
+                        if (metric.name[0] === '_count') {
                             // builtin method for aggregating result count, result is display as _count;
                             group[metric.name] = {['$sum']: 1};
                             project[metric.name] = 1;
                             continue;
                         }
-                        let method = metric.method;
-                        if (method === 'ratio') method = 'sum'; // see post processing for ratio calculation
-                        group[metric.name] = {['$' + method]: '$' + metric.name};
+                        // an accumulator with no code is mongo native
+                        if (!accumulators[metric.method]) {
+                            // no scenario for multiple inputs to system accumulators has been devised
+                            group[metric.name] = {['$' + metric.method]: '$' + metric.name[0]};
+                        } else {
+                            let resultName = (Array.isArray(metric.name))?metric.name.join('.'):metric.name;
+                            let properties = Object.assign(
+                                {lang:"js",accumulateArgs:metric.name.map(a=>'$'+a)},
+                                accumulators[metric.method].functions
+                            );
+                            group[resultName] = {$accumulator:properties}
+                        }
                         project[metric.name] = 1;
                     }
                     statement.push({$group: group});
                     statement.push({$project: project});
-                    if (req.query.sort) statement.push({$sort: Parser.sort(req.query.sort)});
-                    if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)})
                 }
+                if (req.query.sort) statement.push({$sort: Parser.sort(req.query.sort)});
+                if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)})
                 if (req.query._inspect) return res.json(statement);
                 let results = await this.collection.aggregate(statement).toArray();
                 // postprocess results
-                if (metrics.length > 0 && results.length > 0) {
-                    results = dp.organize(results);
-                    for (let metric of metrics) {
-                        if (metric.method==='ratio') processRatio(metric,results);
-                    }
-                }
+                if (metrics.length > 0 && results.length > 0) results = dp.organize(results);
                 let format = req.params.format.split('.');
                 let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
                 if (!module) res.status(400).json({message:'format unavailable'});
@@ -123,24 +137,5 @@ export default class Pull {
             }
         });
         return router;
-    }
-}
-function processRatio(metric,results) {
-    if (results[0][metric.name]) {
-        let sum=0;
-        for (let record of results) {
-            sum += record[metric.name];
-        }
-        for (let record of results) {
-            record[metric.name] = Math.round((record[metric.name] / sum)*1000)/10;
-        }
-    } else {
-        for (let record of results) {
-            for (let key in record) {
-                if (typeof record[key] === 'object') {
-                    processRatio(metric,Object.keys(record[key]).map(k=>record[key][k]));
-                }
-            }
-        }
     }
 }

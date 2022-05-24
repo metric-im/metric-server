@@ -57,14 +57,16 @@ export default class NameSpace {
         let result = await this.collection.aggregate(query).toArray();
         return id?result[0]:result;
     }
-    async fields(account,id) {
+    async fields(account,ns) {
         let ancestry = [];
         let map = {};
-        while (id) {
-            let ns = await this.collection.findOne({_id:id});
-            if (!ns) break;
+        while (ns) {
+            if (typeof ns === 'string') {
+                ns = await this.collection.findOne({_id:ns});
+                if (!ns) break;
+            }
             ancestry.push(ns);
-            id = ns._pid===id?null:ns._pid;
+            ns = ns._pid===ns._id?null:ns._pid;
         }
         for (let source of ancestry) {
             for (let name of source.refinery||[]) {
@@ -83,6 +85,21 @@ export default class NameSpace {
         }
         return map;
     }
+    async accumulators(account,ns) {
+        let map = {sum:null,avg:null,max:null,min:null,first:null,last:null,addToSet:null};
+        while (ns) {
+            if (typeof ns === 'string') {
+                ns = await this.collection.findOne({_id:ns});
+                if (!ns) break;
+            }
+            for (let value of Object.values(NameSpace.accumulators)) {
+                if (value.scope === ns._id) map[value.name] = value;
+            }
+            ns = ns._pid===ns._id?null:ns._pid;
+        }
+        return map;
+    }
     // populated when the server is minted
     static refinery = {};
+    static accumulators = {};
 }
