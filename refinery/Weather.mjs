@@ -1,9 +1,12 @@
 import axios from 'axios';
+import crypto from 'crypto';
+import Stash from '../handlers/Stash.mjs'
 
+let stash = {};
 export default class Weather {
     constructor(connector) {
         this.connector = connector;
-        this.requires = ['location'];
+        this.requires = ['longitude','latitude'];
         this.provides = [
             {_id:'weather',dataType:"string",accumulator:"addToSet"},
             {_id:'temperature',dataType:"float",accumulator:"avg"},
@@ -20,7 +23,7 @@ export default class Weather {
     async process(context,event) {
         if (!event.latitude || !event.longitude) return;
         let url = `${this.base}?lon=${event.latitude}&lat=${event.longitude}&appid=${this.key}&units=metric`;
-        let result = await axios.get(url);
+        let result = await Stash.get(url,600);
         if (result && result.data.weather && result.data.weather.length>0) {
             event.weather = result.data.weather[0].main;
             event.weatherDescription = result.data.weather[0].description;

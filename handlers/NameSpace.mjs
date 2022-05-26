@@ -36,7 +36,7 @@ export default class NameSpace {
             Object.assign(ns,body);
             if (!(await this.connector.acl.test.write(
                 {account:account.id},{namespace:body._id}
-            ))) return null
+            ))) throw new Error("unauthorized");
         }
         return await this.data.put(account,"namespace",ns);
     }
@@ -55,7 +55,19 @@ export default class NameSpace {
             query.unshift({$match:{_id:{$in:ids}}});
         }
         let result = await this.collection.aggregate(query).toArray();
-        return id?result[0]:result;
+        if (id && result) {
+            result = result[0];
+            if (result.refinery) {
+                let available = {};
+                result.refinery.sort((a,b)=>{
+                    a = NameSpace.refinery[a];
+                    for (let field of a.provides) available[field._id] = true;
+                    for (let x of a.requires||[]) if (!available[x]) return 1;
+                    return -1;
+                })
+            }
+        }
+        return result;
     }
     async fields(account,ns) {
         let ancestry = [];

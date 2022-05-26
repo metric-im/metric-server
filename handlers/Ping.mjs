@@ -49,7 +49,7 @@ export default class Ping {
                     ip:req.ip,
                     ua:req.headers['user-agent']
                 },req.body._origin);
-                if (this.connector.profile.profile==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
+                if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
                 if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
                 if (Array.isArray(req.body)) {
                     let writes = [];
