@@ -44,7 +44,7 @@ export default class MetricServer {
         router.use('/ontology',(new Ontology(this.connector)).routes());
         router.use('/redact',(new Redact(this.connector)).routes());
         router.use('/analysis',(new Analysis(this.connector)).routes());
-        router.use('/stash',(new Stash(this.connector)).routes());
+        // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
     }
 }

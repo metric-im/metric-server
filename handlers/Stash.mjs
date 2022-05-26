@@ -13,6 +13,7 @@ export default class Stash {
     static timer = null;
     static cleanUp = 0;
     routes() {
+        //TODO: not fully implemented with authentication response type
         let router = express.Router();
         router.use((req,res,next)=>{
             if (req.account && req.account.id) next();
@@ -29,7 +30,7 @@ export default class Stash {
         });
         return router;
     }
-    static async get(account,url,secs=60) {
+    static async get(url,secs=60) {
         // perform garbage collection every five minutes
         if ((Date.now() - Stash.cleanUp) > 0) {
             for (let record in stash) {
