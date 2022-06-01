@@ -45,7 +45,7 @@ export default class Map extends Formatter {
                 let path = data.map((r)=>`{lat:${r.latitude},lng:${r.longitude}}`).join(',');
                 return `new google.maps.Polyline({map:map,path:[${path}]})`
             },
-            heatmap:(data)=>{
+            heat:(data)=>{
                 // if there is a count provided use weighted location
                 let locations = data.map((r)=>r.hasOwnProperty("_count")
                     ?`{location:new google.maps.LatLng(${r.latitude},${r.longitude}),weight:${r._count}}`
