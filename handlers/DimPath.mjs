@@ -1,7 +1,8 @@
 import Parser from './Parser.mjs';
 
 export default class DimPath {
-    constructor(fieldMap) {
+    constructor(fieldMap,connector) {
+        this.connector = connector;
         this.fieldMap = fieldMap;
         this.dimensions = [];
         this._ASSIGN = "assign";

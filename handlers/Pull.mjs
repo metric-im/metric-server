@@ -40,12 +40,12 @@ export default class Pull {
                     metrics = metrics.map(m => {
                         let parts = m.split(':');
                         let name = parts[0].startsWith('(')?parts[0].slice(1,-1).split(','):[parts[0]];
-                        let method = fieldMap[name]?fieldMap[name].accumulator:(parts[1]||'sum');
+                        let method = parts[1]?parts[1]:(fieldMap[name]?fieldMap[name].accumulator:'sum');
                         return {name: name, method: method}
                     });
                 } else metrics = [];
                 // parse dimensions with DimensionPath helper
-                let dp = new DimPath(fieldMap,metrics);
+                let dp = new DimPath(fieldMap,this.connector);
                 try {
                     dp.parse(dimensions,metrics);
                 } catch(e) {
