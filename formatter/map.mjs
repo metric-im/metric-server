@@ -9,13 +9,17 @@ export default class Map extends Formatter {
     async render(res,data) {
         let trayStyle = "position:relative;display:flex;height:100vh;width:100vh";
         let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
-        let scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${this.apikey}&callback=initMap`
+        let scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${this.apikey}&callback=initMap&libraries=visualization`
         let head = `<meta charset="utf-8"><script async src="${scriptSrc}"></script>`;
         let bodyStyle = `margin:0;padding:0;border:0`;
         let body = `<div style="${trayStyle}"><div id="container" style="${containerStyle}"></div></div>`;
         data = data.filter(r=>(r.latitude!==null&&r.longitude!==null&&r.site!==null));
 
-        let script = `
+        let script = (data.length === 0)?`
+            <script lang="JavaScript">
+                document.getElementById('container').innerHTML = "<div style='margin:20px'>No data available</div>";
+            </script>\`;
+        `:`
             <script lang="JavaScript">
                 function initMap() {
                     let map = new google.maps.Map(document.getElementById('container'), {
@@ -37,9 +41,16 @@ export default class Map extends Formatter {
                     return `new google.maps.Marker({map:map,position:${latLng},title:"${this.constructTitle(r)}"})`;
                 }).join('; ');
             },
-            polyline:(data)=>{
+            path:(data)=>{
                 let path = data.map((r)=>`{lat:${r.latitude},lng:${r.longitude}}`).join(',');
                 return `new google.maps.Polyline({map:map,path:[${path}]})`
+            },
+            heatmap:(data)=>{
+                // if there is a count provided use weighted location
+                let locations = data.map((r)=>r.hasOwnProperty("_count")
+                    ?`{location:new google.maps.LatLng(${r.latitude},${r.longitude}),weight:${r._count}}`
+                    :`new google.maps.LatLng(${r.latitude},${r.longitude})`).join(',');
+                return `new google.maps.visualization.HeatmapLayer({map:map,data:[${locations}],radius:100})`
             }
         }
     }
