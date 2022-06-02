@@ -7,7 +7,7 @@ export default class Map extends Formatter {
         this.apikey = this.dp.connector.profile.GOOGLE_API_KEY;
     }
     async render(res,data) {
-        let trayStyle = "position:relative;display:flex;height:100vh;width:100vh";
+        let trayStyle = "position:relative;display:flex;height:100vh";
         let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
         let scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${this.apikey}&callback=initMap&libraries=visualization`
         let head = `<meta charset="utf-8"><script async src="${scriptSrc}"></script>`;

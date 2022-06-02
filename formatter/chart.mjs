@@ -31,29 +31,33 @@ export default class Chart extends Formatter {
     }
     async render(res,data) {
         let invert = ['pie','doughnut','polarArea'].includes(this.type);
-        let trayStyle = "position:relative;display:flex;height:90vh;width:90vh;margin:5vh"
-        let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
-        let head = `<meta charset="utf-8"><script src="https://metric.im/lib/chartjs"></script>`;
+        let trayStyle = "position:relative;display:flex"
+        let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
+        let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
+            + `<script src="https://metric.im/lib/chartjs"></script>`
         let body =
                 `<div style="${trayStyle}">
-                    <div id="container" style="${containerStyle}"><canvas width=900 id="canvas"></canvas></div>
+                    <div id="container" style="${containerStyle}"><canvas id="canvas"></canvas></div>
                 </div>`;
         let control = {
             type:this.type||'bar',
             data:this.construct(data,invert),
-            options:{scales:{y:{beginAtZero:true}},maintainAspectRatio:false}
+            options:{scales:{y:{beginAtZero:true}},maintainAspectRatio:false,responsive:true}
         }
         let script = `
             <script lang="JavaScript">
+            console.log(window.innerWidth+","+window.innerHeight);
             let canvas = document.getElementById('canvas');
             let ctx=canvas.getContext('2d');
-            // ctx.style.width = window.innerWidth+"px";
-            // ctx.style.height = window.innerHeight+"px";
             let data = ${JSON.stringify(control)};
             const chart=new Chart(ctx, data);
+            chart.resize(window.innerWidth,window.innerHeight);
+            document.addEventListener('resize',()=>{
+                chart.resize(window.innerWidth,window.innerHeight);
+            })
             </script>
         `;
-        let html = `<!DOCTYPE html>\n<html>\n<head>${head}</head>\n<body>\n${body}\n${script}\n</body>\n</html>`;
+        let html = `<!DOCTYPE html>\n<html>\n<head>${head}</head>\n<body style="margin:0;padding:0">\n${body}\n${script}\n</body>\n</html>`;
         res.send(html);
     }
 }
