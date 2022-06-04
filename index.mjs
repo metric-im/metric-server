@@ -30,7 +30,7 @@ export default class MetricServer {
             for (let key of Object.keys(Accumulator.default.functions)) {
                 Accumulator.default.functions[key] = Accumulator.default.functions[key].toString();
             }
-            instance.accumulators[Accumulator.name] = Accumulator.default;
+            instance.accumulators[Accumulator.default.name] = Accumulator.default;
         }
         NameSpace.refinery = instance.refinery;
         NameSpace.accumulators = instance.accumulators;
