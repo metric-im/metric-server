@@ -42,33 +42,24 @@ export default class Ping {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
                 let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
-                if (!fieldMap) fieldMap = {};
                 let context = Object.assign({
                     hostname:req.hostname,
                     url:req.url,
                     ip:req.ip,
-                    ua:req.headers['user-agent']
-                },req.body._origin);
-                if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
-                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
+                    ua:req.headers['user-agent'],
+                    ns:ns,
+                    fieldMap:fieldMap||{}
+                });
                 if (Array.isArray(req.body)) {
                     let writes = [];
                     for (let o of req.body) {
-                        // remove _origin from the body before casting it.
-                        let _origin = Object.assign({},o._origin);
-                        if (o._origin) delete o._origin;
-                        o = this.castFields(o,fieldMap);
-                        let doc = Object.assign(o,Parser.time(o._time),_origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
-                        for (let refiner of ns.refinery||[]) await NameSpace.refinery[refiner].process(context,doc);
-                        writes.push({insertOne:{document:doc}});
+                        let body = await this.constructBody(context,o,req);
+                        writes.push({insertOne:{document:body}});
                     }
                     let result = await this.collection.bulkWrite(writes);
                     res.json(result);
                 } else {
-                    let o = Object.assign(this.castFields(req.body,fieldMap),this.castFields(req.query,fieldMap));
-                    let body = Object.assign(o,Parser.time(o._time),req.body._origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
-                    if (req.body._origin) delete req.body._origin;
-                    for (let refiner of ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+                    let body = await this.constructBody(context,Object.assign(req.body,req.query),req);
                     await this.collection.insertOne(body);
                     switch(req.params.format) {
                         case "json":
@@ -112,5 +103,24 @@ export default class Ping {
             }
             return r;
         },{})
+    }
+    async constructBody(context,body,req) {
+        if (body._origin) {
+            // only take explicit attributes from the _origin object then delete it.
+            if (body._origin.hostname) context.hostname = body._origin.hostname;
+            if (body._origin.url) context.url = body._origin.url;
+            if (body._origin.ip) context.ip = body._origin.ip;
+            if (body._origin.ua) context.ua = body._origin.ua;
+            delete body._origin;
+            if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
+            if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
+        }
+        body = this.castFields(body,context.fieldMap);
+        if (!body._time) body._time = new Date();
+        body._account = req.account.id;
+        body._ns = req.params.ns;
+        body._id = this.connector.idForge.datedId();
+        for (let refiner of context.ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+        return body;
     }
 }

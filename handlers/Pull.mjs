@@ -65,11 +65,11 @@ export default class Pull {
                 // add derived fields
                 let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name));
                 statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
-                    if (fieldMap[k].code && fieldNames.includes(k)) {
+                    if (fieldMap[k].derived && fieldNames.includes(k)) {
                         try {
                             if (fieldMap[k].interpreter==='json') {
-                                r[k] = Parser.objectify(ontology[k].code);
-                            } else if (fieldMap[k].interpreter==='js' || fieldMap[k].interpreter==='javascript') {
+                                r[k] = Parser.objectify(fieldMap[k].code);
+                            } else if (!fieldMap[k].interpreter || fieldMap[k].interpreter==='javascript') {
                                 let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
                                 if (inputs) {
                                     inputs = inputs[1].split(',').reduce((r,a)=>{
