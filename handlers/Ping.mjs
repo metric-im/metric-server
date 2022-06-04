@@ -54,9 +54,11 @@ export default class Ping {
                 if (Array.isArray(req.body)) {
                     let writes = [];
                     for (let o of req.body) {
-                        o = this.castFields(o,fieldMap);
-                        let doc = Object.assign(o,Parser.time(o._time),o._origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
+                        // remove _origin from the body before casting it.
+                        let _origin = Object.assign({},o._origin);
                         if (o._origin) delete o._origin;
+                        o = this.castFields(o,fieldMap);
+                        let doc = Object.assign(o,Parser.time(o._time),_origin,{_account: req.account.id, _ns: req.params.ns, _id: this.connector.idForge.datedId()});
                         for (let refiner of ns.refinery||[]) await NameSpace.refinery[refiner].process(context,doc);
                         writes.push({insertOne:{document:doc}});
                     }

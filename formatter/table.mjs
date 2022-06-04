@@ -79,8 +79,6 @@ thead {
 th, td {
     text-align:left;
     vertical-align:top;
-    height:100%;
-    width:100%;
 }
 td {
     padding: var(--spacerhalf) var(--spacer);
