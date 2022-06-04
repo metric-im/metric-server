@@ -98,7 +98,7 @@ export default class NameSpace {
         return map;
     }
     async accumulators(account,ns) {
-        let map = {sum:null,avg:null,max:null,min:null,first:null,last:null,addToSet:null};
+        let map = {sum:null,avg:null,max:null,min:null,first:null,last:null,addToSet:null,stdDevPop:null,stdDevSamp:null};
         while (ns) {
             if (typeof ns === 'string') {
                 ns = await this.collection.findOne({_id:ns});
