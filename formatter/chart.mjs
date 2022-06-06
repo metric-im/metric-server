@@ -38,7 +38,8 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
-            + `<script src="https://metric.im/lib/chartjs"></script>`
+            + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
+            + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
         let body =
                 `<div style="${trayStyle}">
                     <div id="container" style="${containerStyle}"><canvas id="canvas"></canvas></div>
@@ -46,8 +47,15 @@ export default class Chart extends Formatter {
         let control = {
             type:this.type||'bar',
             data:this.construct(data,invert),
-            options:{maintainAspectRatio:false,responsive:true}
+            options:{
+                maintainAspectRatio:false,
+                responsive:true,
+                plugins: {zoom: {
+                    zoom: {wheel: {enabled: true},pinch: {enabled: true},mode: 'x'}}},
+                    pan: {enabled:true,mode:'x',modifierKey:'ctrl'}
+            }
         }
+
         let script = `
             <script lang="JavaScript">
             console.log(window.innerWidth+","+window.innerHeight);

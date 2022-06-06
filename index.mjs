@@ -15,6 +15,10 @@ export default class MetricServer {
         this.rootPath = path.dirname(fileURLToPath(import.meta.url));
         this.refinery = {};
         this.accumulators = {};
+        this.library = {
+            'chartjs':this.rootPath+'/node_modules/chart.js/dist/chart.js',
+            'chartjs-zoom':this.rootPath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js'
+        };
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
