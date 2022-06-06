@@ -17,7 +17,8 @@ export default class MetricServer {
         this.accumulators = {};
         this.library = {
             'chartjs':this.rootPath+'/node_modules/chart.js/dist/chart.js',
-            'chartjs-zoom':this.rootPath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js'
+            'chartjs-zoom':this.rootPath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js',
+            'hammerjs':this.rootPath+'/node_modules/hammerjs/hammer.min.js'
         };
     }
     static async mint(connector) {

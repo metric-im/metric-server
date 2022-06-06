@@ -23,6 +23,7 @@ export default class Chart extends Formatter {
                 backgroundColor:invert?colorSet.subtle:color.subtle(),
                 borderColor:invert?colorSet.solid:color.solid(),
                 borderWidth:1,
+                fill:true
             }
             if (this.type==='line') {
                 dataset.cubicInterpolationMode = 'monotone'
@@ -38,6 +39,7 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
+            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammerjs"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
         let body =
@@ -52,7 +54,7 @@ export default class Chart extends Formatter {
                 responsive:true,
                 plugins: {zoom: {
                     zoom: {wheel: {enabled: true},pinch: {enabled: true},mode: 'x'}}},
-                    pan: {enabled:true,mode:'x',modifierKey:'ctrl'}
+                    pan: {enabled:true,mode:'x'}
             }
         }
 
