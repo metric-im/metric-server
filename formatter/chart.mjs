@@ -24,6 +24,10 @@ export default class Chart extends Formatter {
                 borderColor:invert?colorSet.solid:color.solid(),
                 borderWidth:1,
             }
+            if (this.type==='line') {
+                dataset.cubicInterpolationMode = 'monotone'
+                if (data.length > 25)  dataset.pointRadius = 0;
+            }
             color.next();
             return dataset;
         });
@@ -42,7 +46,7 @@ export default class Chart extends Formatter {
         let control = {
             type:this.type||'bar',
             data:this.construct(data,invert),
-            options:{scales:{y:{beginAtZero:true}},maintainAspectRatio:false,responsive:true}
+            options:{maintainAspectRatio:false,responsive:true}
         }
         let script = `
             <script lang="JavaScript">
@@ -64,13 +68,21 @@ export default class Chart extends Formatter {
 class ColorFactory {
     constructor() {
         this.base = [
-            {r:255, g:99, b:132, a:1},
-            {r:54, g:162, b:235, a:1},
-            {r:255, g:206, b:86, a:1},
-            {r:75, g:192, b:192, a:1},
-            {r:153, g:153, b:255, a:1},
-            {r:255, g:159, b:64, a:1}
-        ]
+            {r:28, g:168, b:221, a:1},
+            {r:27, g:201, b:142, a:1},
+            {r:159, g:134, b:255, a:1},
+            {r:228, g:216, b:54, a:1},
+            {r:250, g:136, b:140, a:1},
+            {r:65, g:186, b:191, a:1},
+            {r:21, g:78, b:168, a:1},
+            {r:160, g:165, b:3, a:1},
+            {r:127, g:232, b:150, a:1},
+            {r:232, g:195, b:127, a:1},
+            {r:232, g:127, b:225, a:1},
+            {r:127, g:232, b:207, a:1},
+            {r:192, g:232, b:127, a:1},
+            {r:65, g:112, b:106, a:1},
+        ];
         this.current = 0;
     }
     reset() {
