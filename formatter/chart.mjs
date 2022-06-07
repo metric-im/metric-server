@@ -3,6 +3,7 @@ import Formatter from './formatter.mjs';
 export default class Chart extends Formatter {
     constructor(dp,props) {
         super(dp,props);
+        this.props = props;
         this.type = props[0];
     }
     construct(data,invert) {
@@ -22,12 +23,12 @@ export default class Chart extends Formatter {
                     data:data.map(row=>row[metric.name]),
                 backgroundColor:invert?colorSet.subtle:color.subtle(),
                 borderColor:invert?colorSet.solid:color.solid(),
-                borderWidth:1,
-                fill:true
+                borderWidth:1
             }
             if (this.type==='line') {
                 dataset.cubicInterpolationMode = 'monotone'
                 if (data.length > 25)  dataset.pointRadius = 0;
+                if (this.props[1] === 'fill') dataset.fill = true;
             }
             color.next();
             return dataset;
