@@ -63,7 +63,7 @@ export default class Pull {
                     )
                 });
                 // add derived fields
-                let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name));
+                let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name)).flat();
                 statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
                     if (fieldMap[k].derived && fieldNames.includes(k)) {
                         try {
