@@ -19,6 +19,7 @@ export default class Redact {
         })
         router.all("/:ns/:id?", async (req, res) => {
             try {
+                return res.send("feature under development");
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,3);
                 if (!ns) return res.status(401).send();
                 if (req.params.id) {

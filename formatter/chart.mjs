@@ -40,7 +40,7 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
-            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammerjs"></script>`
+            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
         let body =
@@ -61,7 +61,6 @@ export default class Chart extends Formatter {
 
         let script = `
             <script lang="JavaScript">
-            console.log(window.innerWidth+","+window.innerHeight);
             let canvas = document.getElementById('canvas');
             let ctx=canvas.getContext('2d');
             let data = ${JSON.stringify(control)};

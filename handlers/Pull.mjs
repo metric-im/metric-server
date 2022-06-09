@@ -70,7 +70,7 @@ export default class Pull {
                             if (fieldMap[k].interpreter==='json') {
                                 r[k] = Parser.objectify(fieldMap[k].code);
                             } else if (!fieldMap[k].interpreter || fieldMap[k].interpreter==='javascript') {
-                                let inputs = fieldMap[k].code.match(/^function\((.*)\)/);
+                                let inputs = fieldMap[k].code.match(/^function(?:\W*?)\((.*)\)/);
                                 if (inputs) {
                                     inputs = inputs[1].split(',').reduce((r,a)=>{
                                         if (a) r.push('$'+a);
