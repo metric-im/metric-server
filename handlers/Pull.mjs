@@ -65,18 +65,18 @@ export default class Pull {
                 // add derived fields
                 let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name)).flat();
                 statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
-                    if (fieldMap[k].derived && fieldNames.includes(k)) {
+                    if (fieldMap[k].derive && fieldNames.includes(k)) {
                         try {
                             if (fieldMap[k].interpreter==='json') {
-                                r[k] = Parser.objectify(fieldMap[k].code);
+                                r[k] = Parser.objectify(fieldMap[k].derive);
                             } else if (!fieldMap[k].interpreter || fieldMap[k].interpreter==='javascript') {
-                                let inputs = fieldMap[k].code.match(/^function(?:\W*?)\((.*)\)/);
+                                let inputs = fieldMap[k].derive.match(/^function(?:\W*?)\((.*)\)/);
                                 if (inputs) {
                                     inputs = inputs[1].split(',').reduce((r,a)=>{
                                         if (a) r.push('$'+a);
                                         return r;
                                     },[]);
-                                    r[k] = {$function:{body:fieldMap[k].code, args:inputs, lang:"js"}}
+                                    r[k] = {$function:{body:fieldMap[k].derive, args:inputs, lang:"js"}}
                                 }
                             }
                         } catch(e) {
