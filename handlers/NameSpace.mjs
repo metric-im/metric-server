@@ -104,8 +104,8 @@ export default class NameSpace {
                 ns = await this.collection.findOne({_id:ns});
                 if (!ns) break;
             }
-            for (let value of Object.values(NameSpace.accumulators)) {
-                if (value.scope === ns._id) map[value.name] = value;
+            for (let [name,value] of Object.entries(NameSpace.Accumulator.components)) {
+                if (value.scope === ns._id) map[name] = value;
             }
             ns = ns._pid===ns._id?null:ns._pid;
         }
@@ -113,5 +113,5 @@ export default class NameSpace {
     }
     // populated when the server is minted
     static refinery = {};
-    static accumulators = {};
+    static Accumulator = {};
 }

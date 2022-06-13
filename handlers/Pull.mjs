@@ -98,28 +98,58 @@ export default class Pull {
                     }
                     for (let metric of metrics) {
                         if (metric.name[0] === '_count') {
-                            // builtin method for aggregating result count, result is display as _count;
+                            // builtin method for aggregating result count, result is displayed as _count;
                             group[metric.name] = {['$sum']: 1};
                             project[metric.name] = 1;
                             continue;
                         }
-                        // an accumulator with no code is mongo native
+                        // an undefined accumulator is assumed to be mongo native
                         if (!accumulators[metric.method]) {
                             // no scenario for multiple inputs to system accumulators has been devised
-                            group[metric.name] = {['$' + metric.method]: '$' + metric.name[0]};
+                            group[metric.name.join('.')] = {['$' + metric.method]: '$' + metric.name[0]};
                         } else {
-                            let resultName = (Array.isArray(metric.name))?metric.name.join('.'):metric.name;
-                            let properties = Object.assign(
-                                {lang:"js",accumulateArgs:metric.name.map(a=>'$'+a)},
-                                accumulators[metric.method].functions
-                            );
-                            group[resultName] = {$accumulator:properties}
+                            let accumulator = new accumulators[metric.method](...metric.name);
+                            Object.assign(group,accumulator.$accumulator());
                         }
                         project[metric.name] = 1;
                     }
                     statement.push({$group: group});
                     statement.push({$project: project});
                 }
+                // add/overwrite fields with projection code
+                statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
+                    if (fieldMap[k].project && fieldNames.includes(k)) {
+                        try {
+                            if (fieldMap[k].interpreter==='json') {
+                                r[k] = Parser.objectify(fieldMap[k].project);
+                            } else if (!fieldMap[k].interpreter || fieldMap[k].interpreter==='javascript') {
+                                let inputs = fieldMap[k].project.match(/^function(?:\W*?)\((.*)\)/);
+                                if (inputs) {
+                                    inputs = inputs[1].split(',').reduce((r,a)=>{
+                                        if (a) r.push('$'+a);
+                                        return r;
+                                    },[]);
+                                    r[k] = {$function:{body:fieldMap[k].project, args:inputs, lang:"js"}}
+                                } else {
+                                    r[k] = "malformed function";
+                                }
+                            }
+                        } catch(e) {
+                            throw new Error(`Could not parse projected field ${k}, ${e.message}`);
+                        }
+                    }
+                    return r;
+                },{})});
+                for (let metric of metrics) {
+                    if (accumulators[metric.method]) {
+                        let accumulator = new accumulators[metric.method](...metric.name);
+                        let window = accumulator.$setWindowFields();
+                        if (!window) continue;
+                        if (!Array.isArray(window)) window = [window];
+                        statement = statement.concat(window);
+                    }
+                }
+
                 if (req.query.sort) statement.push({$sort: Parser.sort(req.query.sort)});
                 if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)})
                 if (req.query._inspect) return res.json(statement);

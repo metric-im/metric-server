@@ -8,6 +8,11 @@ export default class Formatter {
         if (this.options.file) this.sendFile(res,data,'data.json');
         else res.send(data);
     }
+    getTitle(col) {
+        let title = col;
+        if (this.dp.fieldMap && this.dp.fieldMap[col] && this.dp.fieldMap[col].title) title = this.dp.fieldMap[col].title
+        return title;
+    }
     sendFile(res,data,name='data.txt') {
         res.setHeader('Content-type', "application/octet-stream");
         res.setHeader('Content-disposition', 'attachment; filename='+name);

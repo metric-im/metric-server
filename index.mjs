@@ -5,6 +5,7 @@ import Ontology from './handlers/Ontology.mjs';
 import NameSpace from './handlers/NameSpace.mjs';
 import Redact from './handlers/Redact.mjs';
 import Analysis from './handlers/Analysis.mjs';
+import Accumulator from "./handlers/Accumulator.mjs";
 import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import path from "path";
@@ -30,16 +31,9 @@ export default class MetricServer {
             let name = file.replace(/(\.mjs|\.js)/,"");
             instance.refinery[name] = new Refiner.default(connector);
         }
-        let accumulators = fs.readdirSync(instance.rootPath+"/accumulators");
-        for (let file of accumulators) {
-            let Accumulator = await import('./accumulators/'+file);
-            for (let key of Object.keys(Accumulator.default.functions)) {
-                Accumulator.default.functions[key] = Accumulator.default.functions[key].toString();
-            }
-            instance.accumulators[Accumulator.default.name] = Accumulator.default;
-        }
+        instance.Accumulator = await Accumulator.mint(instance.rootPath);
+        NameSpace.Accumulator = instance.Accumulator;
         NameSpace.refinery = instance.refinery;
-        NameSpace.accumulators = instance.accumulators;
         return instance;
     }
     routes() {

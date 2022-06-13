@@ -7,7 +7,9 @@ export default class Table extends Formatter {
     construct(data) {
         let flat = this.flatten(data);
         let header = "";
-        for (let col of flat.template) header+="<th><div>"+col+"</div></th>";
+        for (let col of flat.template) {
+            header+="<th><div>"+this.getTitle(col)+"</div></th>";
+        }
         header = "<tr>"+header+"</tr>\n";
         let rows = "";
         for (let col of flat.rows) {

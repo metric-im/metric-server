@@ -1,4 +1,4 @@
-export default class Ratio {
+export default class ExpMovingAverage {
     constructor() {
         this.args = Array.from(arguments);
         this.name = this.args.join('.');
@@ -13,18 +13,11 @@ export default class Ratio {
                 $setWindowFields:{
                     sortBy:{_id:1},
                     output:{
-                        [this.name+'_total']:{
-                            $sum:"$"+this.name,
-                            window:{documents:["unbounded","unbounded"]}
+                        [this.name]:{
+                            $expMovingAvg: { input: "$"+this.name, alpha: 0.10 }
                         }
                     }
                 }
-            },
-            {
-                $addFields:{[this.name]:{$round:[{$multiply:[{$divide:['$'+this.name,'$'+this.name+'_total']},100]},2]}}
-            },
-            {
-                $project:{[this.name+"_total"]:0}
             }
         ]
     }
