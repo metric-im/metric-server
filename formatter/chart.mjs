@@ -15,7 +15,10 @@ export default class Chart extends Formatter {
             return r;
         },{subtle:[],solid:[]}):null;
         let labels = data.map(row=>{
-            return this.dp.dimensions.map(d=>row[d.name]).join('.');
+            return this.dp.dimensions.map(d=>{
+                if (d.field && d.field.dataType === 'date') return new Date(row[d.name]).toISOString();
+                else return row[d.name]
+            }).join('.');
         });
         let datasets=this.dp.metrics.map(metric=>{
             let dataset =  {
@@ -40,8 +43,8 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
-            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
+            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
         let body =
                 `<div style="${trayStyle}">

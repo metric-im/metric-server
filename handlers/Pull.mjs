@@ -40,8 +40,13 @@ export default class Pull {
                     metrics = metrics.map(m => {
                         let parts = m.split(':');
                         let name = parts[0].startsWith('(')?parts[0].slice(1,-1).split(','):[parts[0]];
-                        let method = parts[1]?parts[1]:(fieldMap[name]?fieldMap[name].accumulator:'sum');
-                        return {name: name, method: method}
+                        let params = [];
+                        let method = fieldMap[name]?fieldMap[name].accumulator:'sum';
+                        if (parts[1]) {
+                            params = parts[1].split('.');
+                            method = params.shift();
+                        }
+                        return {name: name, method: method,params:params}
                     });
                 } else metrics = [];
                 // parse dimensions with DimensionPath helper
@@ -62,6 +67,8 @@ export default class Pull {
                         Parser.objectify(req.query.where || {})
                     )
                 });
+                // add any filters built into the dimensions request
+                if (Object.keys(dp.filters).length > 0) statement.push({$match:dp.filters});
                 // add derived fields
                 let fieldNames = dp.dimensions.map(d=>d.name).concat(metrics.map(d=>d.name)).flat();
                 statement.push({$addFields:Object.keys(fieldMap).reduce((r,k)=>{
@@ -85,8 +92,6 @@ export default class Pull {
                     }
                     return r;
                 },{})});
-                // add any filters built into the dimensions request
-                if (Object.keys(dp.filters).length > 0) statement.push({$match:dp.filters});
                 // group by metrics if provided
                 if (metrics.length > 0) {
                     let group = {_id: {}};
@@ -109,7 +114,7 @@ export default class Pull {
                             group[metric.name.join('.')] = {['$' + metric.method]: '$' + metric.name[0]};
                         } else {
                             let accumulator = new accumulators[metric.method](...metric.name);
-                            Object.assign(group,accumulator.$accumulator());
+                            Object.assign(group,accumulator.$accumulator(...metric.params));
                         }
                         project[metric.name] = 1;
                     }
@@ -143,7 +148,7 @@ export default class Pull {
                 for (let metric of metrics) {
                     if (accumulators[metric.method]) {
                         let accumulator = new accumulators[metric.method](...metric.name);
-                        let window = accumulator.$setWindowFields();
+                        let window = accumulator.$setWindowFields(...metric.params);
                         if (!window) continue;
                         if (!Array.isArray(window)) window = [window];
                         statement = statement.concat(window);

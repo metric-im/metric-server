@@ -25,7 +25,7 @@ export default class DimPath {
             else if (match[1]==='+') compressor=this._COMBINE;
             else if (match[1]==='<') compressor=this._COMPRESS;
             else if (match[1]==='!') compressor=this._SKIP;
-            return {name:match[2],value:match[3],compressor:compressor,filters:[]};
+            return {name:match[2],value:match[3],compressor:compressor,field:this.fieldMap[match[2]],filters:[]};
         });
 
         // construct filters

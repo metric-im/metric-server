@@ -10,7 +10,9 @@ export default class Formatter {
     }
     getTitle(col) {
         let title = col;
-        if (this.dp.fieldMap && this.dp.fieldMap[col] && this.dp.fieldMap[col].title) title = this.dp.fieldMap[col].title
+        if (this.dp && this.dp.fieldMap && this.dp.fieldMap[col] && this.dp.fieldMap[col].title) {
+            title = this.dp.fieldMap[col].title;
+        }
         return title;
     }
     sendFile(res,data,name='data.txt') {
@@ -40,15 +42,15 @@ export default class Formatter {
             if (data === null) {
                 template[name] = "null";
             } else if (Array.isArray(data)) {
-                for (let i = 0; i < data.length; i++) {
-                    buildTemplate(data[i],name);
+                for (let o of data) {
+                    buildTemplate(o,name);
                 }
             } else if (typeof(data) === "object") {
-                if (data.constructor.name === "ObjectID") {
-                    template[name] = data.toString();
+                if (data.constructor.name === "ObjectID" || typeof data.getMonth === 'function') {
+                    template[name] = "";
                 } else {
-                    for (let o in data) {
-                        if (data.hasOwnProperty(o)) buildTemplate(data[o],(name?name+"."+o:o));
+                    for (let [key,value] of Object.entries(data)) {
+                        buildTemplate(value,(name?name+"."+key:key));
                     }
                 }
             } else {
@@ -65,10 +67,12 @@ export default class Formatter {
                 }
             } else if (typeof(data) === "object" && data !== null) {
                 if (data.constructor.name === "ObjectID") {
-                    template[name] = data.toString();
+                    rows[rows.length - 1][name] = data.toString();
+                } else if (typeof data.getMonth === 'function') {
+                    rows[rows.length - 1][name] = data.toISOString();
                 } else {
-                    for (let o in data) {
-                        if (data.hasOwnProperty(o)) read(data[o], (name ? name + "." + o : o));
+                    for (let [key,value] of Object.entries(data)) {
+                        read(value, (name ? name + "." + key : key));
                     }
                 }
             } else {

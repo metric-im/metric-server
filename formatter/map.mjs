@@ -4,6 +4,7 @@ export default class Map extends Formatter {
     constructor(dp,props) {
         super(dp,props);
         this.type = props[0]||'marker';
+        this.zoom = props[1]||8;
         this.apikey = this.dp.connector.profile.GOOGLE_API_KEY;
     }
     async render(res,data) {
@@ -24,7 +25,7 @@ export default class Map extends Formatter {
                 function initMap() {
                     let map = new google.maps.Map(document.getElementById('container'), {
                         center: {lat:${data[0].latitude}, lng: ${data[0].longitude}},
-                        zoom: 8
+                        zoom: ${this.zoom}
                     });
                     ${this.typeRender[this.type](data)}
                 }

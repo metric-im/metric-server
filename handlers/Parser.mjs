@@ -13,7 +13,7 @@ export default class Parser {
                     let x = obj[a].match(/^\/(.*)\/(.*)/);
                     if (x) obj[a] = {$regex:x[1],$options:x[2]}
                     else {
-                        let y = obj[a].match(/ISODate\((.*)\)/)
+                        let y = obj[a].match(/ISODate\((?:["'])?(.*?)(?:["'])?\)/)
                         if (y) obj[a] = new Date(y[1]);
                     }
                 }
