@@ -1,11 +1,10 @@
 export default class Ratio {
     constructor() {
-        this.inputs = Array.from(arguments)
-        this.name = this.inputs.join('.');
+        this.name = name;
     }
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:{$add:[this.inputs.map(arg=>'$'+arg).join(',')]}}};
+        return {[this.name]:{$avg:this.name}};
     }
     $setWindowFields(params) {
         return [

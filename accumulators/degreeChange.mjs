@@ -1,11 +1,10 @@
 export default class degreeChange {
-    constructor() {
-        this.inputs = Array.from(arguments)
-        this.name = this.inputs.join('.');
+    constructor(name) {
+        this.name = name;
     }
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:{$add:this.inputs.map(arg=>'$'+arg)}}};
+        return {[this.name]:{$avg:this.name}};
     }
     $setWindowFields(params) {
         return [

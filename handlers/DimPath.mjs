@@ -5,6 +5,7 @@ export default class DimPath {
         this.connector = connector;
         this.fieldMap = fieldMap;
         this.dimensions = [];
+        this.metrics = [];
         this._ASSIGN = "assign";
         this._OBJECTIFY = "objectify";
         this._COMPRESS = "compress";
@@ -14,21 +15,29 @@ export default class DimPath {
     get hasCompressors() {
         return this.dimensions.some(d=>d.compressor);
     }
-    parse(data=[],metrics) {
-        this.metrics = metrics;
-        if (typeof data === 'string') data = this.smartSplit(data);
-        // parse dimension syntax for display and filter
-        this.dimensions = data.map(k=>{
-            let match = k.match(/^([@+<!])?([A-za-z0-9-_]+)[:]?(.*)/);
+    parse(dimensions=[],metrics=[]) {
+        // parse metrics
+        this.metrics = this.smartSplit(metrics).map(k => {
+            let match = k.match(/^([A-Za-z0-9-_.]+)[:]?(.*)/);
+            let nameArgs = match[1].split('.').map(a=>(this.fieldMap[a]?this.fieldMap[a]:a));
+            let name = nameArgs.shift();
+            let methodArgs = match[2]?match[2].split('.'):[];
+            let method = methodArgs.length>0?methodArgs.shift():(name.accumulator || 'sum');
+            return {name: name._id||name, nameArgs:nameArgs, method: method, methodArgs:methodArgs, field:(typeof name==='object')?name:null}
+        });
+        // parse dimensions
+        this.dimensions = this.smartSplit(dimensions).map(k=>{
+            let match = k.match(/^([@+<!])?([A-Za-z0-9-_.]+)[:]?(.*)/);
             let compressor = null;
             if (match[1]==='@') compressor=this._ASSIGN;
             else if (match[1]==='+') compressor=this._COMBINE;
             else if (match[1]==='<') compressor=this._COMPRESS;
             else if (match[1]==='!') compressor=this._SKIP;
-            return {name:match[2],value:match[3],compressor:compressor,field:this.fieldMap[match[2]],filters:[]};
+            let nameArgs = match[2].split('.').map(a=>(this.fieldMap[a]?this.fieldMap[a]:a));;
+            let name = nameArgs.shift();
+            return {name:name._id||name,nameArgs:nameArgs,value:match[3],compressor:compressor,field:(typeof name==='object')?name:null,filters:[]};
         });
-
-        // construct filters
+        // construct dimension filters
         for (let key of this.dimensions) {
             if (key.value) {
                 let matchRange = key.value.match(/^([A-Za-b0-9-_]*)~(.*)$/);
@@ -81,6 +90,46 @@ export default class DimPath {
         }
         if (item) result.push(item);
         return result;
+    }
+    expandDerivedFields() {
+        let result = [];
+        for (let field of this.dimensions.concat(this.metrics)) {
+            if (field.field && field.field.derive) {
+                result.push(this.expandCode(field.field,"derive"));
+            }
+        }
+        return result;
+    }
+    expandProjectedFields() {
+        let result = [];
+        for (let field of this.dimensions.concat(this.metrics)) {
+            if (field.field && field.field.project) {
+                result.push(this.expandCode(field.field,"project"));
+            }
+        }
+        return result;
+    }
+    expandCode(field,codeAttribute) {
+        try {
+            if (field.interpreter==='json') {
+                return {$set:{[field.name]:Parser.objectify(field[codeAttribute])}};
+            } else { // default to javascript
+                let inputs = field[codeAttribute].match(/^function(?:\W*?)\((.*)\)/);
+                if (inputs) {
+                    inputs = inputs[1].split(',').reduce((r,a)=>{
+                        r.push('$'+a);
+                        return r;
+                    },[]);
+                    //TODO: This has become a mess. params on dimensions are not working out cleanly.
+                    let availableFields = this.dimensions.concat(this.metrics);
+                    let baseField = availableFields.find(af=>af.name===field._id);
+                    if (baseField) inputs = inputs.concat(baseField.nameArgs);
+                    return {$set:{[field._id]:{$function:{body:field[codeAttribute], args:inputs, lang:"js"}}}};
+                }
+            }
+        } catch(e) {
+            throw new Error(`Could not parse ${codeAttribute} field ${field.name}, ${e.message}`);
+        }
     }
     organize(data) {
         if (this.dimensions.length === 0 || data.length === 0) return data;

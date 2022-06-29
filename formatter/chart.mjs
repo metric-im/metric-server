@@ -14,16 +14,20 @@ export default class Chart extends Formatter {
             color.next();
             return r;
         },{subtle:[],solid:[]}):null;
-        let labels = data.map(row=>{
-            return this.dp.dimensions.map(d=>{
-                if (d.field && d.field.dataType === 'date') return new Date(row[d.name]).toISOString();
-                else return row[d.name]
-            }).join('.');
-        });
-        let datasets=this.dp.metrics.map(metric=>{
-            let dataset =  {
-                label:metric.name+(metric.method!=='sum'?` (${metric.method})`:""),
-                    data:data.map(row=>row[metric.name]),
+        let dimensions = this.dp.dimensions.map(d=>({name:d.name,compressed:d.compressor===this.dp._COMPRESS}));
+        while(dimensions.length>0 && dimensions[dimensions.length-1].compressed) dimensions.pop();
+        let labels = data.map(row=>dimensions.map(d=>row[d.name]).join('.'));
+        let keys = data.reduce((keys,row)=>{
+            for (let key of Object.keys(row).filter(key=>!dimensions.find(d=>d.name===key))) {
+                let name = key.split('.').pop();
+                keys[key] = this.dp.metrics.find(m=>m.name===name);
+            }
+            return keys;
+        },{});
+        let datasets = Object.entries(keys).map(([key,metric])=>{
+            let dataset = {
+                label:key+(metric.method!=='sum'?` (${metric.method})`:""),
+                data:data.map(row=>row[key]),
                 backgroundColor:invert?colorSet.subtle:color.subtle(),
                 borderColor:invert?colorSet.solid:color.solid(),
                 borderWidth:1
@@ -35,7 +39,7 @@ export default class Chart extends Formatter {
             }
             color.next();
             return dataset;
-        });
+        },[]);
         return {labels:labels,datasets:datasets};
     }
     async render(res,data) {

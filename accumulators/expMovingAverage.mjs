@@ -1,12 +1,11 @@
 export default class ExpMovingAverage {
-    constructor() {
-        this.inputs = Array.from(arguments)
-        this.name = this.inputs.join('.');
+    constructor(name) {
+        this.name = name;
     }
     static description = `Moving average for the input metric. Look back ten records or provided number, i.e. :expMovingAverage.15`
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:{$add:[this.inputs.map(arg=>'$'+arg).join(',')]}}};
+        return {[this.name]:{$avg:this.name}};
     }
     $setWindowFields(records) {
         records = records?parseInt(records):10;

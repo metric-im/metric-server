@@ -1,12 +1,11 @@
 export default class Change {
-    constructor() {
-        this.inputs = Array.from(arguments)
-        this.name = this.inputs.join('.');
+    constructor(name) {
+        this.name = name;
     }
     static descrtiption = 'provides the change be the current value and the last value'
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:{$add:this.inputs.map(arg=>'$'+arg)}}};
+        return {[this.name]:{$avg:this.name}};
     }
     $setWindowFields(params) {
         return [
