@@ -116,7 +116,7 @@ export default class Ping {
             if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
         }
         body = this.castFields(body,context.fieldMap);
-        if (!body._time) body._time = new Date();
+        body._time = new Date(body._time||null);
         body._account = req.account.id;
         body._ns = req.params.ns;
         body._id = this.connector.idForge.datedId();
