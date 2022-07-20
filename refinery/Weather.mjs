@@ -23,7 +23,7 @@ export default class Weather {
     async process(context,event) {
         if (!event.latitude || !event.longitude) return;
         let url = `${this.base}?lon=${event.latitude}&lat=${event.longitude}&appid=${this.key}&units=metric`;
-        let result = await Stash.get(url,600);
+        let result = await Stash.get(context,url,600);
         if (result && result.data.weather && result.data.weather.length>0) {
             event.weather = result.data.weather[0].main;
             event.weatherDescription = result.data.weather[0].description;
