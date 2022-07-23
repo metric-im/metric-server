@@ -3,7 +3,7 @@ import Formatter from './formatter.mjs';
 export default class Chart extends Formatter {
     constructor(dp,props) {
         super(dp,props);
-        this.props = props;
+        this.props = {};
         this.type = props[0];
     }
     construct(data,invert) {
@@ -34,8 +34,8 @@ export default class Chart extends Formatter {
             }
             if (this.type==='line') {
                 dataset.cubicInterpolationMode = 'monotone'
-                if (data.length > 25)  dataset.pointRadius = 0;
-                if (this.props[1] === 'fill') dataset.fill = true;
+                if (data.length > 25 || this.options.quiet)  dataset.pointRadius = 0;
+                if (this.options.fill) dataset.fill = true;
             }
             color.next();
             return dataset;
@@ -64,6 +64,10 @@ export default class Chart extends Formatter {
                     zoom: {wheel: {enabled: true},pinch: {enabled: true},mode: 'x'}}},
                     pan: {enabled:true,mode:'x'}
             }
+        }
+        if (this.options.quiet) {
+            control.options.plugins.legend = {display:false};
+            control.data.labels = control.data.labels.map(l=>"");
         }
 
         let script = `

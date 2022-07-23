@@ -21,6 +21,7 @@ export default class LocationFromIp {
     async process(context,event) {
         if (!context.ip) return;
         let ip = context.ip.replace(/::ffff:/,"");
+        if (ip === "::1") ip = "208.157.149.67"; // TESTING
         let geo = geoIp.lookup(ip);
         if (geo) {
             Object.assign(event,{
