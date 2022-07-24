@@ -26,7 +26,7 @@ export default class Chart extends Formatter {
         },{});
         let datasets = Object.entries(keys).map(([key,metric])=>{
             let dataset = {
-                label:key+(metric.method!=='sum'?` (${metric.method})`:""),
+                label:key+(metric.method!=='sum'&&!this.options.quiet?` (${metric.method})`:""),
                 data:data.map(row=>row[key]),
                 backgroundColor:invert?colorSet.subtle:color.subtle(),
                 borderColor:invert?colorSet.solid:color.solid(),
@@ -66,8 +66,10 @@ export default class Chart extends Formatter {
             }
         }
         if (this.options.quiet) {
-            control.options.plugins.legend = {display:false};
             control.data.labels = control.data.labels.map(l=>"");
+        }
+        if (this.options.nolegend) {
+            control.options.plugins.legend = {display:false};
         }
 
         let script = `
