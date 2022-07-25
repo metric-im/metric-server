@@ -27,6 +27,8 @@ export default class Weather {
         if (result && result.data.weather && result.data.weather.length>0) {
             event.weather = result.data.weather[0].main;
             event.weatherDescription = result.data.weather[0].description;
+            event.weatherIcon = result.data.weather[0].icon;
+            event.weatherId = result.data.weather[0].id;
             event.temperature = result.data.main.temp;
             event.humidity = result.data.main.humidity;
             event.barometer = result.data.main.pressure;

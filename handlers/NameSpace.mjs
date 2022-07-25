@@ -62,8 +62,8 @@ export default class NameSpace {
                 result.refinery.sort((a,b)=>{
                     a = NameSpace.refinery[a];
                     for (let field of a.provides) available[field._id] = true;
-                    for (let x of a.requires||[]) if (!available[x]) return 1;
-                    return -1;
+                    for (let x of a.requires||[]) if (!available[x]) return -1;
+                    return 1;
                 })
             }
         }
