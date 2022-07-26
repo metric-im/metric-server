@@ -9,6 +9,7 @@ export default class DimPath {
         this._ASSIGN = "assign";
         this._OBJECTIFY = "objectify";
         this._COMPRESS = "compress";
+        this._SPREAD = "spread";
         this._COMBINE = "combine";
         this._SKIP = "skip";
     }
@@ -27,11 +28,12 @@ export default class DimPath {
         });
         // parse dimensions
         this.dimensions = this.smartSplit(dimensions).map(k=>{
-            let match = k.match(/^([@+<!])?([A-Za-z0-9-_.]+)[:]?(.*)/);
+            let match = k.match(/^([@+><!])?([A-Za-z0-9-_.]+)[:]?(.*)/);
             let compressor = null;
             if (match[1]==='@') compressor=this._ASSIGN;
             else if (match[1]==='+') compressor=this._COMBINE;
             else if (match[1]==='<') compressor=this._COMPRESS;
+            else if (match[1]==='>') compressor=this._SPREAD;
             else if (match[1]==='!') compressor=this._SKIP;
             let nameArgs = match[2].split('.').map(a=>(this.fieldMap[a]?this.fieldMap[a]:a));;
             let name = nameArgs.shift();
@@ -185,6 +187,7 @@ export default class DimPath {
             let record = data[index];
             let col = 0;
             let pinDepth = 0;
+            let spreadBase = null;
             for (let [key, value] of Object.entries(record)) {
                 let dim = dimensions[col];
                 if (dim) {
@@ -216,6 +219,9 @@ export default class DimPath {
                             if (n <= col) r[dim.name] = record[dim.name];
                             return r;
                         }, {});
+                    } else if (dim.compressor === this._SPREAD) {
+                        dimStack[dimStack.length - 1][key] = value;
+                        spreadBase = Object.assign({},dimStack[dimStack.length - 1]);
                     } else if (dim.compressor === this._COMPRESS) {
                         if (value !== pinRecord[key]) {
                             this.clearStackTop(dimStack);
@@ -270,6 +276,12 @@ export default class DimPath {
                         }
                     }
                 } else {
+                    if (spreadBase && Object.keys(spreadBase).length < col) {
+                        dimStack.pop();
+                        let slot = Object.assign({},spreadBase);
+                        dimStack[dimStack.length-1].push(slot);
+                        dimStack.push(slot);
+                    }
                     dimStack[dimStack.length-1][key] = record[key];
                 }
                 col++;
