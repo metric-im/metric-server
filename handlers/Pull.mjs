@@ -108,6 +108,19 @@ export default class Pull {
                 }
                 // postprocess results
                 if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
+                if (req.query.sort) {
+                    let sort = Parser.sort(req.query.sort);
+                    results.sort((a,b)=>{
+                        for (let [key,val] of Object.entries(sort)) {
+                            if (a[key] === b[key]) continue;
+                            else if (a[key === null]) return val;
+                            else if (b[key === null]) return -val;
+                            else if (a[key] > b[key]) return val;
+                            else return -val;
+                        }
+                        return 0;
+                    })
+                }
                 let format = req.params.format.split('.');
                 let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
                 if (!module) res.status(400).json({message:'format unavailable'});

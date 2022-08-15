@@ -137,7 +137,9 @@ export default class DimPath {
         if (this.dimensions.length === 0 || data.length === 0) return data;
         data = data.sort((a, b) => {
             for (let dim of this.dimensions) {
-                if (a[dim.name] < b[dim.name]) return -1;
+                if (!a[dim.name]) return -1;
+                else if (!b[dim.name]) return 1;
+                else if (a[dim.name] < b[dim.name]) return -1;
                 else if (a[dim.name] > b[dim.name]) return 1;
             }
             return 0;
