@@ -44,7 +44,7 @@ export default class Chart extends Formatter {
     }
     async render(res,data) {
         let invert = ['pie','doughnut','polarArea'].includes(this.type);
-        let trayStyle = "position:relative;display:flex"
+        let trayStyle = "position:relative;display:flex;height:100%"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
             + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`

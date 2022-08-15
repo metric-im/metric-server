@@ -122,8 +122,8 @@ export default class Pull {
                         return 0;
                     })
                 }
-                if (req.query.last) results = results.slice(results.length-req.query.last);
-                if (req.query.first) results = results.slice(results.length-req.query.first);
+                if (req.query.last) results = results.slice(-parseInt(req.query.last));
+                if (req.query.first) results = results.slice(0,parseInt(req.query.first));
                 let format = req.params.format.split('.');
                 let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
                 if (!module) res.status(400).json({message:'format unavailable'});
