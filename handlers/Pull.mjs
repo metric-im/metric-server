@@ -101,7 +101,8 @@ export default class Pull {
                     }
 
                     if (req.query.sort) statement.push({$sort: Parser.sort(req.query.sort)});
-                    if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)})
+                    // limit can be misleading because of the rearrangement of results.
+                    if (req.query.limit) statement.push({$limit: parseInt(req.query.limit)});
                     if (req.query._inspect) return res.json(statement);
                     results = await this.collection.aggregate(statement).toArray();
                     if (req.query._stash) this.stash.put(req.account,req.url,results,req.query._stash);
@@ -121,6 +122,8 @@ export default class Pull {
                         return 0;
                     })
                 }
+                if (req.query.last) results = results.slice(results.length-req.query.last);
+                if (req.query.first) results = results.slice(results.length-req.query.first);
                 let format = req.params.format.split('.');
                 let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
                 if (!module) res.status(400).json({message:'format unavailable'});
