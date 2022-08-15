@@ -50,6 +50,9 @@ export default class Ping {
                     ns:ns,
                     fieldMap:fieldMap||{}
                 });
+                if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
+                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
+
                 if (Array.isArray(req.body)) {
                     let writes = [];
                     for (let o of req.body) {
@@ -112,8 +115,6 @@ export default class Ping {
             if (body._origin.ip) context.ip = body._origin.ip;
             if (body._origin.ua) context.ua = body._origin.ua;
             delete body._origin;
-            if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
-            if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
         }
         body = this.castFields(body,context.fieldMap);
         body._time = body._time?new Date(body._time):new Date();
