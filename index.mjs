@@ -25,9 +25,9 @@ export default class MetricServer {
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
-        let refiners = fs.readdirSync(instance.rootPath+"/refinery");
+        let refiners = fs.readdirSync(path.resolve(instance.rootPath+"/refinery"));
         for (let file of refiners) {
-            let Refiner = await import('./refinery/'+file);
+            let Refiner = await import(file);
             let name = file.replace(/(\.mjs|\.js)/,"");
             instance.refinery[name] = new Refiner.default(connector);
         }
