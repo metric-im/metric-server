@@ -13,21 +13,22 @@ import {fileURLToPath} from "url";
 export default class MetricServer {
     constructor(connector) {
         this.connector = connector;
-        this.rootPath = process.env.RELATIVEMODULES?path.dirname(fileURLToPath(import.meta.url)):".";
+        this.rootPath = path.dirname(fileURLToPath(import.meta.url));
+        this.modulePath = process.env.RELATIVEMODULES?this.rootPath:".";
         this.refinery = {};
         this.accumulators = {};
         this.library = {
-            'chartjs':this.rootPath+'/node_modules/chart.js/dist/chart.js',
-            'chartjs-zoom':this.rootPath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js',
-            'hammer.min.js':this.rootPath+'/node_modules/hammerjs/hammer.min.js',
-            'hammer.min.js.map':this.rootPath+'/node_modules/hammerjs/hammer.min.js.map',
+            'chartjs':this.modulePath+'/node_modules/chart.js/dist/chart.js',
+            'chartjs-zoom':this.modulePath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js',
+            'hammer.min.js':this.modulePath+'/node_modules/hammerjs/hammer.min.js',
+            'hammer.min.js.map':this.modulePath+'/node_modules/hammerjs/hammer.min.js.map',
         };
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
         let refiners = fs.readdirSync(path.resolve(instance.rootPath+"/refinery"));
         for (let file of refiners) {
-            let Refiner = await import(file);
+            let Refiner = await import('./refinery/'+file);
             let name = file.replace(/(\.mjs|\.js)/,"");
             instance.refinery[name] = new Refiner.default(connector);
         }
