@@ -9,19 +9,20 @@ import Accumulator from "./handlers/Accumulator.mjs";
 import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import path from "path";
-import {fileURLToPath} from "url";
-export default class MetricServer {
+import Componentry from "@metric-im/componentry";
+
+export default class MetricServer extends Componentry.Module {
     constructor(connector) {
-        this.connector = connector;
-        this.rootPath = path.dirname(fileURLToPath(import.meta.url));
-        this.modulePath = process.env.RELATIVEMODULES?this.rootPath:".";
+        super(connector,import.meta.url);
         this.refinery = {};
         this.accumulators = {};
-        this.library = {
-            'chartjs':this.modulePath+'/node_modules/chart.js/dist/chart.js',
-            'chartjs-zoom':this.modulePath+'/node_modules/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js',
-            'hammer.min.js':this.modulePath+'/node_modules/hammerjs/hammer.min.js',
-            'hammer.min.js.map':this.modulePath+'/node_modules/hammerjs/hammer.min.js.map',
+    }
+    get library() {
+        return {
+            'chartjs':'/chart.js/dist/chart.js',
+            'chartjs-zoom':'/chartjs-plugin-zoom/dist/chartjs-plugin-zoom.js',
+            'hammer.min.js':'/hammerjs/hammer.min.js',
+            'hammer.min.js.map':'/hammerjs/hammer.min.js.map',
         };
     }
     static async mint(connector) {

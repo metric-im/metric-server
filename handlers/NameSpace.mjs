@@ -7,7 +7,6 @@ export default class NameSpace {
     constructor(connector) {
         this.connector = connector;
         this.collection = this.connector.db.collection('namespace');
-        this.data = this.connector.modules.DataServer.module;
         this.accessLevels = ['all','read','write','owner'];
     }
     get template() {
@@ -24,7 +23,7 @@ export default class NameSpace {
     }
     async remove(account,id) {
         if (!(await this.connector.acl.test.owner({account:account.id},{namespace:id}))) throw new Error("not authorized");
-        await this.data.remove(account,"namespace",id);
+        await this.connector.componentry.modules.DataServer.remove(account,"namespace",id);
     }
     async put(account,body) {
         if (!body || !body._id) throw new Error('Namespace requires an identifier');
@@ -38,7 +37,7 @@ export default class NameSpace {
                 {account:account.id},{namespace:body._id}
             ))) throw new Error("unauthorized");
         }
-        return await this.data.put(account,"namespace",ns);
+        return await this.connector.componentry.modules.DataServer.put(account,"namespace",ns);
     }
     async get(account,id,level=1) {
         let query = [{$sort:{_id:1}}];
