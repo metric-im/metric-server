@@ -6,6 +6,7 @@ let stash = {};
 export default class Weather {
     constructor(connector) {
         this.connector = connector;
+        this.description = 'Use location data to embellish the event with weather data';
         this.requires = ['longitude','latitude'];
         this.provides = [
             {_id:'weather',dataType:"string",accumulator:"addToSet"},

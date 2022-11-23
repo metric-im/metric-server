@@ -1,0 +1,20 @@
+. {
+    display:flex;
+    position:relative;
+    flex-direction: column;
+    height:100%;
+}
+.TableWidget {
+    flex:.3 0;
+}
+.TabWidget {
+    margin-top:var(--spacer);
+}
+.WikiBlock {
+    padding-top:var(--spacerhalf);
+    margin-top:var(--spacerhalf);
+}
+.WikiBlock .content {
+    margin-top:var(--spacer);
+    border-top:1px solid var(--page-border);
+}

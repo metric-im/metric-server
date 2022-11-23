@@ -1,0 +1,52 @@
+. {
+    display:flex;
+    flex-direction:row;
+    height:calc(100% - var(--spacer2));
+    margin:var(--spacer);
+}
+.space-fields {
+    display:flex;
+    flex-direction: column;
+}
+.ontology-spaces {
+    display:flex;
+    flex-direction:column;
+    flex:0 200px;
+    overflow-y:hidden;
+    padding-right:var(--spacer);
+}
+.tab-content {
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:6px;
+    right:6px;
+}
+.ontology-details {
+    display:flex;
+    flex-direction:column;
+    flex:1 1;
+    margin-left:var(--spacer);
+}
+.page-content .k-grid,.page-content .k-tabstrip {
+    height:100%;
+}
+.field-content {
+    flex:60% 1
+}
+.field-properties {
+    flex: 40% 250px;
+    display: flex;
+    flex-direction: column;
+    width: calc(100% - 12px);
+    margin:0 6px;
+}
+LABEL {
+    color:var(--text-quiet);
+    margin-top:var(--spacer);
+}
+.space-controls {
+    position:absolute;
+    bottom:4px;
+    left:var(--spacer);
+}

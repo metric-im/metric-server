@@ -1,0 +1,18 @@
+. {
+    display:flex;
+    flex-direction:column;
+    height:100%;
+}
+> div {
+    margin-bottom:var(--spacer);
+}
+.WikiBlock .content {
+    margin-top:var(--spacer);
+    border-top:1px solid var(--page-border);
+}
+.properties {
+    display:flex;
+    flex:0 0;
+}
+
+

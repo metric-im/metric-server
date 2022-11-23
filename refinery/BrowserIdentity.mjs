@@ -1,6 +1,7 @@
 export default class BrowserIdentity {
     constructor(connector) {
         this.connector = connector;
+        this.description = 'Parse the User Agent for device and browser type';
         this.requires = [];
         this.provides = [
             {_id:'device',dataType:"string",accumulator:"addToSet"},

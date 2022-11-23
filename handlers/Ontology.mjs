@@ -53,6 +53,12 @@ export default class Ontology {
                 res.status(500).json({status:'error',message:`Error deleting namespace: ${e.message}`});
             }
         });
+        router.get('/refinery',(req,res)=>{
+            let result = Object.keys(NameSpace.refinery).map(key => {
+                return {_id:key,description:NameSpace.refinery[key].description}
+            })
+            res.json(result);
+        });
         return router
     }
 }

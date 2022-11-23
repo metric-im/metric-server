@@ -5,6 +5,7 @@ import Holidays from 'date-holidays';
 export default class Holiday {
     constructor(connector) {
         this.connector = connector;
+        this.description = 'Attach locale based holiday if applicable';
         this.holiday = new Holidays();
         this.requires = ['country','state'];
         this.provides = [
