@@ -109,11 +109,19 @@ export default class Ping {
     }
     async constructBody(context,body,req) {
         if (body._origin) {
+            // query string _origin needs to be parsed. This is mostly a DEBUG feature
+            if (typeof req.query._origin === 'string') body._origin = JSON.parse(body._origin);
             // only take explicit attributes from the _origin object then delete it.
             if (body._origin.hostname) context.hostname = body._origin.hostname;
             if (body._origin.url) context.url = body._origin.url;
             if (body._origin.ip) context.ip = body._origin.ip;
             if (body._origin.ua) context.ua = body._origin.ua;
+            if (body._origin.tz) context.tz = body._origin.tz;
+            if (body._origin.tzoff) context.tzoff = body._origin.tzoff;
+            if (body._origin.lang) {
+                context.lang = body._origin.lang;
+                if (!body.language) body.language = body._origin.lang;
+            }
             delete body._origin;
         }
         body = this.castFields(body,context.fieldMap);
