@@ -7,7 +7,7 @@ import geoIp from 'geoip-lite';
 export default class LocationFromIp {
   constructor(connector) {
     this.connector = connector;
-    this.description = 'Attach location data using the IP address provided our determine from the request';
+    this.description = 'Attach location data using the timezone and language provided';
     this.requires=[];
     this.provides = [
       {_id:'location',dataType:"string",accumulator:"addToSet"},

@@ -1,0 +1,69 @@
+. {
+    display:flex;
+    flex-direction: column;
+    align-content: space-around;
+    height:100%
+}
+.explore-instruction {
+    flex:0 0;
+    padding-bottom:var(--spacer);
+}
+.section-title {
+    background-color:var(--tray-bg);
+    font-size:1.1em;
+    font-weight:bold;
+    color:var(--text-color);
+    padding:var(--spacerthird);
+    letter-spacing:3px;
+}
+.explore-ping {
+    display:flex;
+    flex-direction: row;
+    flex:0 0;
+    padding-top:var(--spacer);
+}
+.explore-ping SELECT {
+    height:40px;
+}
+.explore-pull {
+    display:flex;
+    flex-direction: row;
+    flex:1 0;
+    border-bottom:1px solid var(--page-border);
+    margin-bottom:var(--spacer);
+}
+.pull-configure > DIV {
+    margin-top:var(--spacer);
+}
+.pull-configure {
+    flex:0.4 0;
+    margin-right:var(--spacer);
+}
+.pull-render {
+    flex:0.6 0;
+    margin-left:var(--spacer);
+    border-left:1px solid var(--page-border);
+}
+.pull-render IFRAME {
+    box-sizing: border-box;
+    height:100%;
+    width:100%;
+    border:0;
+}
+.explore-url {
+    flex:0 0;
+    vertical-align:middle;
+    min-height:24px;
+    word-break: break-all;
+    font-weight:bold;
+    font-size:1.1em;
+}
+.explore-url A {
+    font-family: monospace;
+    color:darkblue;
+    transition:color 200ms;
+}
+.explore-url.active {
+    background-color:greenyellow;
+}
+
