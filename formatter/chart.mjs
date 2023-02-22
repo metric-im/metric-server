@@ -71,6 +71,13 @@ export default class Chart extends Formatter {
         if (this.options.nolegend) {
             control.options.plugins.legend = {display:false};
         }
+        if (this.options.stacked) {
+            if (!control.options.scales) control.options.scales = {};
+            if (!control.options.scales.x) control.options.scales.x = {};
+            if (!control.options.scales.y) control.options.scales.y = {};
+            control.options.scales.y.stacked = true;
+            if (this.type === 'bar') control.options.scales.x.stacked = true;
+        }
 
         let script = `
             <script lang="JavaScript">
