@@ -4,6 +4,7 @@
  * can provide interesting data with no PII.
  */
 import geoIp from 'geoip-lite';
+import cities from 'cities.json' assert { type: "json" };
 export default class LocationFromIp {
   constructor(connector) {
     this.connector = connector;
@@ -47,6 +48,14 @@ export default class LocationFromIp {
           city:parts[parts.length-1],
           timezone:context.tz
         })
+        //TODO: this should be indexed
+        for (let city of cities) {
+          if (city.name === event.city) {
+            event.longitude = city.lng;
+            event.latitude = city.lat;
+            break;
+          }
+        }
       } else if (context.tzoff) {
         //TODO: This needs some work. The data delivers multiple results and could be sorted by language
         let record = TimeZoneOffset.find(to=>to.timezone_offset===-(context.tzoff/60));
