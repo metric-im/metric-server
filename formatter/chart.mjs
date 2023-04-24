@@ -32,6 +32,7 @@ export default class Chart extends Formatter {
                 borderColor:invert?colorSet.solid:color.solid(),
                 borderWidth:1
             }
+            dataset.label = dataset.label.replace(/_count$/,"");
             if (this.type==='line') {
                 dataset.cubicInterpolationMode = 'monotone'
                 if (data.length > 25 || this.options.quiet)  dataset.pointRadius = 0;

@@ -1,6 +1,6 @@
 {
   "name": "@metric-im/metric-server",
-  "version": "1.4.6",
+  "version": "1.4.8",
   "description": "ping, link, report",
   "main": "index.mjs",
   "scripts": {
@@ -20,7 +20,7 @@
   "homepage": "https://github.com/metric-im/metric-server#readme",
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.3.14",
-    "@metric-im/componentry": "^1.2.2",
+    "@metric-im/componentry": "^1.2.6",
     "axios": "^0.26.0",
     "bcrypt": "^5.0.1",
     "chart.js": "^3.8.0",
