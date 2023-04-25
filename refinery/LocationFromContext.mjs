@@ -51,8 +51,8 @@ export default class LocationFromIp {
         //TODO: this should be indexed
         for (let city of cities) {
           if (city.name === event.city) {
-            event.longitude = city.lng;
-            event.latitude = city.lat;
+            event.longitude = parseFloat(city.lng);
+            event.latitude = parseFloat(city.lat);
             break;
           }
         }
