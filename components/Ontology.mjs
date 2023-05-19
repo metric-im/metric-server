@@ -17,30 +17,29 @@ export default class Ontology extends Component {
     }
     async render(element) {
         await super.render(element);
-        await this.update();
-        let nameSpacesBlock = this.div('ontology-spaces');
-        let nameSpacesList = this.div('page-content',nameSpacesBlock);
-        this.nameSpacesTable = new TableWidget({columns:[
-            {name:"_id",title:"Event Name Space",placeholder:"new name space"}
-        ],data:this.spaces,onSelect:this.selectSpace.bind(this)});
-        await this.nameSpacesTable.render(nameSpacesList);
-        let nameSpacesControls = this.div('page-controls space-controls',nameSpacesBlock);
-        /*ACL>2*/
-        this.buttons.removeSpaceButton = await this.new(Button,{title:'remove',icon:'trash',onClick:this.removeSpace.bind(this)});
-        await this.buttons.removeSpaceButton.render(nameSpacesControls);
-        /*ENDACL*/
-        /*ACL>1*/
-        this.buttons.newSpaceButton = await this.new(Button,{title:'new',icon:'circle-with-plus',onClick:this.addSpace.bind(this)});
-        await this.buttons.newSpaceButton.render(nameSpacesControls);
-        /*ENDACL*/
+        if (!this.props.namespace) {
+            await this.update();
+            let nameSpacesBlock = this.div('ontology-spaces');
+            let nameSpacesList = this.div('page-content',nameSpacesBlock);
+            this.nameSpacesTable = new TableWidget({columns:[
+                {name:"_id",title:"Event Name Space",placeholder:"new name space"}
+            ],data:this.spaces,onSelect:this.selectSpace.bind(this)});
+            await this.nameSpacesTable.render(nameSpacesList);
+            let nameSpacesControls = this.div('page-controls space-controls',nameSpacesBlock);
+            /*ACL>2*/
+            this.buttons.removeSpaceButton = await this.new(Button,{title:'remove',icon:'trash',onClick:this.removeSpace.bind(this)});
+            await this.buttons.removeSpaceButton.render(nameSpacesControls);
+            /*ENDACL*/
+            /*ACL>1*/
+            this.buttons.newSpaceButton = await this.new(Button,{title:'new',icon:'circle-with-plus',onClick:this.addSpace.bind(this)});
+            await this.buttons.newSpaceButton.render(nameSpacesControls);
+            /*ENDACL*/
+        }
 
         let detailsBlock = this.div('ontology-details');
         let detailsBlockContent = this.div('page-content',detailsBlock);
         this.spaceProperties = this.new(SpaceProperties,{context:this.props.context,data:this.space});
-        await this.spaceProperties.render();
-
         this.spaceFields = this.new(SpaceFields,{context:this.props.context,data:this.space,alignButtons:this.alignButtons.bind(this)});
-        await this.spaceFields.render();
         let detailTabs = new TabWidget({tabs:[
             {title:'Properties',component:this.spaceProperties},
             {title:'Fields',component:this.spaceFields}
@@ -58,6 +57,11 @@ export default class Ontology extends Component {
         await this.buttons.removeFieldButton.render(detailControls);
         this.alignButtons();
         /*ENDACL*/
+
+        if (this.props.namespace) {
+            let ns = await API.get('/ontology/ns/'+this.props.namespace);
+            this.selectSpace(ns);
+        }
     }
     async update(reload=true) {
         if (reload) this.spaces = await API.get('/ontology/ns');
@@ -71,12 +75,14 @@ export default class Ontology extends Component {
     }
     alignButtons() {
         /*ACL>1*/
-        if (!this.space) {
-            this.buttons.saveButton.hide();
-            this.buttons.newFieldButton.hide();
-        } else {
-            this.buttons.saveButton.show();
-            this.buttons.newFieldButton.show();
+        if (!this.props.namespace) {
+            if (!this.space) {
+                this.buttons.saveButton.hide();
+                this.buttons.newFieldButton.hide();
+            } else {
+                this.buttons.saveButton.show();
+                this.buttons.newFieldButton.show();
+            }
         }
         if (!this.spaceFields.field) {
             this.buttons.removeFieldButton.hide();
@@ -85,16 +91,18 @@ export default class Ontology extends Component {
         }
         /*ENDACL*/
         /*ACL>2*/
-        if (!this.space) {
-            this.buttons.removeSpaceButton.hide();
-        } else {
-            this.buttons.removeSpaceButton.show();
+        if (!this.props.namespace) {
+            if (!this.space) {
+                this.buttons.removeSpaceButton.hide();
+            } else {
+                this.buttons.removeSpaceButton.show();
+            }
         }
         /*ENDACL*/
     }
     async handleUpdate(attributeName) {
         await super.handleUpdate(attributeName);
-        await this.nameSpacesTable.update();
+        if (this.nameSpacesTable) await this.nameSpacesTable.update();
         this.alignButtons();
     }
     async addSpace() {
