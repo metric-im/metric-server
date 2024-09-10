@@ -7,9 +7,9 @@ import Ontology from './Ontology.mjs';
 import express from 'express';
 import crypto from "crypto";
 export default class Pull {
-    constructor(connector) {
+    constructor(connector,collection='event') {
         this.connector = connector;
-        this.collection = this.connector.db.collection('event');
+        this.collection = this.connector.db.collection(collection);
         this.ontology = new Ontology(connector);
         this.stash = new Stash();
     }

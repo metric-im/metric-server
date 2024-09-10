@@ -25,18 +25,18 @@ import express from 'express';
 const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
 
 export default class Ping {
-    constructor(connector) {
+    constructor(connector,collection='event') {
         this.connector = connector;
-        this.collection = this.connector.db.collection('event');
+        this.collection = this.connector.db.collection(collection);
         this.ontology = new Ontology(connector);
     }
 
     routes() {
         let router = express.Router();
-        router.use((req,res,next)=>{
-            if (req.account && req.account.id) next();
-            else res.status(401).send();
-        })
+        // router.use((req,res,next)=>{
+        //     if (req.account && req.account.id) next();
+        //     else res.status(401).send();
+        // })
         router.all("/:format/:ns", async (req, res) => {
             try {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);

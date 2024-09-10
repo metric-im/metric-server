@@ -5,9 +5,9 @@ import Ontology from './Ontology.mjs';
 import express from 'express';
 
 export default class Analysis {
-    constructor(connector) {
+    constructor(connector,collection='event') {
         this.connector = connector;
-        this.collection = this.connector.db.collection('event');
+        this.collection = this.connector.db.collection(collection);
         this.ontology = new Ontology(connector);
     }
 

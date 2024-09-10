@@ -16,6 +16,14 @@ export default class MetricServer extends Componentry.Module {
         super(connector,import.meta.url);
         this.refinery = {};
         this.accumulators = {};
+        this.collectionName = 'event';
+    }
+    /**
+     * Set collection is used to rename the default media collection
+     * @param name alternate name to 'media'
+     */
+    setCollection(name) {
+        this.collectionName = name;
     }
     get library() {
         return {
@@ -41,12 +49,13 @@ export default class MetricServer extends Componentry.Module {
     routes() {
         let router = express.Router();
         // set routes services
-        router.use('/ping',(new Ping(this.connector)).routes());
-        router.use('/pull',(new Pull(this.connector)).routes());
-        router.use('/ontology',(new Ontology(this.connector)).routes());
-        router.use('/redact',(new Redact(this.connector)).routes());
-        router.use('/analysis',(new Analysis(this.connector)).routes());
+        router.use('/ping',(new Ping(this.connector,this.collectionName)).routes());
+        router.use('/pull',(new Pull(this.connector,this.collectionName)).routes());
+        router.use('/ontology',(new Ontology(this.connector,this.collectionName)).routes());
+        router.use('/redact',(new Redact(this.connector,this.collectionName)).routes());
+        router.use('/analysis',(new Analysis(this.connector,this.collectionName)).routes());
         // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
     }
+
 }
