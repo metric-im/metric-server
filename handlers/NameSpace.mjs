@@ -2,7 +2,6 @@
  * NameSpace defines a collection of event fields for a domain
  * @type {Data}
  */
-let _refineryModules = {};
 export default class NameSpace {
     constructor(connector) {
         this.connector = connector;
@@ -66,7 +65,7 @@ export default class NameSpace {
                 })
             }
         }
-        return result;
+        return result || [];
     }
     async fields(account,ns) {
         let ancestry = [];

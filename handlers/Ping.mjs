@@ -22,6 +22,7 @@ import Parser from './Parser.mjs';
 import Ontology from './Ontology.mjs';
 import NameSpace from './NameSpace.mjs';
 import express from 'express';
+import MetricServer from '../../../metric-im/metric-server/index.mjs';
 const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
 
 export default class Ping {
@@ -41,52 +42,31 @@ export default class Ping {
             try {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
-                let fieldMap = await this.ontology.nameSpace.fields(req.account,req.params.ns);
-                let context = Object.assign({
-                    hostname:req.hostname,
-                    url:req.url,
-                    ip:req.ip,
-                    ua:req.headers['user-agent'],
-                    ns:ns,
-                    fieldMap:fieldMap||{}
-                });
-                if (this.connector.profile.PROFILE==="DEV" && context.ip === '::1') context.ip = '208.157.149.67';
-                if (context.ip === '::ffff:127.0.0.1') context.ip = req.headers['x-forwarded-for'];
-
-                if (Array.isArray(req.body)) {
-                    let writes = [];
-                    for (let o of req.body) {
-                        let body = await this.constructBody(context,o,req);
-                        writes.push({insertOne:{document:body}});
-                    }
-                    let result = await this.collection.bulkWrite(writes);
-                    res.json(result);
-                } else {
-                    let body = await this.constructBody(context,Object.assign(req.body,req.query),req);
-                    await this.collection.insertOne(body);
-                    switch(req.params.format) {
-                        case "json":
-                            res.json(body);
-                            break;
-                        case "pixel":
-                            res.set("Content-Type","image/gif");
-                            res.contentLength = 43;
-                            res.end(pixel,'binary');
-                            break;
-                        case "script":
-                            res.set("Content-Type","text/javascript");
-                            res.send("{}");
-                            break;
-                        case 'table':
-                            res.set("Content-Type","text/html");
-                            let data = Object.keys(body).sort().map(key=>`<tr><td>${key}: </td><td><b>${body[key]}</b></td></tr>`);
-                            res.send(`<html><body><table>${data.join("")}</table></body></html>`);
-                            break;
-                        case "silent":
-                        default:
-                            res.status(204).send();
-                            break;
-                    }
+                let body = Object.assign({},req.body,req.query);
+                let context = MetricServer.getContext(req.params.account,req.params.ns,req);
+                let result = this.execute(context,body);
+                switch(req.params.format) {
+                    case "json":
+                        res.json(result);
+                        break;
+                    case "pixel":
+                        res.set("Content-Type","image/gif");
+                        res.contentLength = 43;
+                        res.end(pixel,'binary');
+                        break;
+                    case "script":
+                        res.set("Content-Type","text/javascript");
+                        res.send("{}");
+                        break;
+                    case 'table':
+                        res.set("Content-Type","text/html");
+                        let data = Object.keys(result).sort().map(key=>`<tr><td>${key}: </td><td><b>${result[key]}</b></td></tr>`);
+                        res.send(`<html><body><table>${data.join("")}</table></body></html>`);
+                        break;
+                    case "silent":
+                    default:
+                        res.status(204).send();
+                        break;
                 }
             } catch (e) {
                 console.error(`Error pinging event`, e);
@@ -95,6 +75,7 @@ export default class Ping {
         });
         return router;
     }
+    // Lookup explicit declarations for the attribute in the given namespace or guess
     castFields(o,fields) {
         return Object.keys(o).reduce((r,k)=>{
             if (fields[k] && fields[k].dataType) {
@@ -107,13 +88,23 @@ export default class Ping {
             return r;
         },{})
     }
-    async constructBody(context,body,req) {
+
+    /**
+     * The ping request may include an attribute named _origin. This is
+     * a structure that presents the contextual data about the session
+     * as known to the calling app. _origin can set the IP, the User Agent
+     * and other attributes.
+     * @param context
+     * @param body
+     * @param req
+     * @returns {Promise<{}>}
+     */
+    async embelishBody(body) {
+        let context = {};
         if (body._origin) {
             // query string _origin needs to be parsed. This is mostly a DEBUG feature
-            if (typeof req.query._origin === 'string') body._origin = JSON.parse(body._origin);
+            if (typeof body._origin === 'string') body._origin = JSON.parse(body._origin);
             // only take explicit attributes from the _origin object then delete it.
-            if (body._origin.hostname) context.hostname = body._origin.hostname;
-            if (body._origin.url) context.url = body._origin.url;
             if (body._origin.ip) context.ip = body._origin.ip;
             if (body._origin.ua) context.ua = body._origin.ua;
             if (body._origin.tz) context.tz = body._origin.tz;
@@ -124,12 +115,30 @@ export default class Ping {
             }
             delete body._origin;
         }
-        body = this.castFields(body,context.fieldMap);
+        let fieldmap = await this.ontology.nameSpace.fields(body._account,body._ns)
+        body = this.castFields(body,fieldmap);
         body._time = body._time?new Date(body._time):new Date();
-        body._account = req.account.id;
-        body._ns = req.params.ns;
         body._id = this.connector.idForge.datedId();
-        for (let refiner of context.ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+        for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
         return body;
+    }
+    async execute(body={}) {
+        try {
+            if (Array.isArray(body)) {
+                let writes = [];
+                for (let o of body) {
+                    let body = await this.embelishBody(o);
+                    writes.push({insertOne:{document:body}});
+                }
+                let result = await this.collection.bulkWrite(writes);
+                return result;
+            } else {
+                body = await this.embelishBody(body);
+                let result = await this.collection.insertOne(body);
+                return result;
+            }
+        } catch(e) {
+            throw(e);
+        }
     }
 }
