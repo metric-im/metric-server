@@ -9,11 +9,12 @@ import Accumulator from "./handlers/Accumulator.mjs";
 import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import path from "path";
-import Componentry from "@metric-im/componentry";
+import Componentry from "../componentry/index.mjs";
 
 export default class MetricServer extends Componentry.Module {
     constructor(connector) {
         super(connector,import.meta.url);
+        this.connector = connector;
         this.refinery = {};
         this.accumulators = {};
         this.collectionName = 'event';
@@ -33,6 +34,26 @@ export default class MetricServer extends Componentry.Module {
             'hammer.min.js.map':'/hammerjs/hammer.min.js.map',
         };
     }
+    initializeEvent(account,ns,req) {
+        let body = {
+            _id:this.connector.idForge.datedId(),
+            _account:account,
+            _ns:ns,
+            _time: new Date(),
+        }
+        // If it's a web event pull context from the request
+        if (req) {
+            body.hostname = req.hostname;
+            body.url = req.url
+            body._origin = {
+                ip: req.headers['x-forwarded-for'] || req.ip,
+                ua: req.get('User-Agent')
+            }
+            if (body._origin.ip === '::1') body._origin.ip = '208.157.149.67'; ///TODO: For dev purposes, remove
+            if (body._origin.ip === '::ffff:127.0.0.1') body._origin.ip = req.headers['x-forwarded-for'];
+        }
+        return body;
+    }
     static async mint(connector) {
         let instance = new MetricServer(connector);
         let refiners = fs.readdirSync(path.resolve(instance.rootPath+"/refinery"));
@@ -44,18 +65,39 @@ export default class MetricServer extends Componentry.Module {
         instance.Accumulator = await Accumulator.mint(instance.rootPath);
         NameSpace.Accumulator = instance.Accumulator;
         NameSpace.refinery = instance.refinery;
+        instance.handlers = {
+            ping:new Ping(instance.connector,this.collectionName),
+            pull:new Pull(instance.connector,this.collectionName),
+            ontology:new Ontology(instance.connector,this.collectionName),
+            redact:new Redact(instance.connector,this.collectionName),
+            analysis:new Analysis(instance.connector,this.collectionName)
+        }
+        instance._api = {
+            ping:instance.handlers.ping.execute.bind(instance.handlers.ping),
+            pull:instance.handlers.pull.execute.bind(instance.handlers.pull),
+            initializeEvent:instance.initializeEvent,
+            connector:instance.connector
+        }
         return instance;
+    }
+    static async getApi(db,options) {
+        let componentry = {}
+        componentry = typeof(db)==='string'
+          ?{profile:Object.assign({mongo:{host:db}},options)}
+          :{profile:options,db:db};
+        const connector = await Componentry.Connector.mint(componentry);
+        let instance = await MetricServer.mint(connector);
+        return instance._api;
     }
     routes() {
         let router = express.Router();
         // set routes services
-        router.use('/ping',(new Ping(this.connector,this.collectionName)).routes());
-        router.use('/pull',(new Pull(this.connector,this.collectionName)).routes());
-        router.use('/ontology',(new Ontology(this.connector,this.collectionName)).routes());
-        router.use('/redact',(new Redact(this.connector,this.collectionName)).routes());
-        router.use('/analysis',(new Analysis(this.connector,this.collectionName)).routes());
+        router.use('/ping',this.handlers.ping.routes());
+        router.use('/pull',this.handlers.pull.routes());
+        router.use('/ontology',this.handlers.ontology.routes());
+        router.use('/redact',this.handlers.redact.routes());
+        router.use('/analysis',this.handlers.analysis.routes());
         // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
     }
-
 }

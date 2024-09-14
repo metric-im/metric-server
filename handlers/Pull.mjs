@@ -136,6 +136,9 @@ export default class Pull {
         });
         return router;
     }
+    async execute(account,ns,context={},path) {
+        return {}
+    }
 }
 class Stash {
     constructor() {
