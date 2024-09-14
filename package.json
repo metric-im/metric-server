@@ -1,6 +1,6 @@
 {
   "name": "@metric-im/metric-server",
-  "version": "1.4.12",
+  "version": "1.5.0",
   "description": "ping, link, report",
   "main": "index.mjs",
   "scripts": {
