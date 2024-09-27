@@ -22,7 +22,6 @@ import Parser from './Parser.mjs';
 import Ontology from './Ontology.mjs';
 import NameSpace from './NameSpace.mjs';
 import express from 'express';
-import MetricServer from '../../metric-server/index.mjs';
 const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
 
 export default class Ping {
@@ -43,8 +42,7 @@ export default class Ping {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
                 let body = Object.assign({},req.body,req.query);
-                let context = MetricServer.getContext(req.params.account,req.params.ns,req);
-                let result = this.execute(context,body);
+                let result = this.execute(body);
                 switch(req.params.format) {
                     case "json":
                         res.json(result);
