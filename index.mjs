@@ -6,10 +6,10 @@ import NameSpace from './handlers/NameSpace.mjs';
 import Redact from './handlers/Redact.mjs';
 import Analysis from './handlers/Analysis.mjs';
 import Accumulator from "./handlers/Accumulator.mjs";
-import Stash from './handlers/Stash.mjs';
+// import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import path from "path";
-import Componentry from "../componentry/index.mjs";
+import Componentry from "@metric-im/componentry";
 
 export default class MetricServer extends Componentry.Module {
     constructor(connector) {

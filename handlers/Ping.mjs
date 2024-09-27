@@ -22,7 +22,7 @@ import Parser from './Parser.mjs';
 import Ontology from './Ontology.mjs';
 import NameSpace from './NameSpace.mjs';
 import express from 'express';
-import MetricServer from '../../../metric-im/metric-server/index.mjs';
+import MetricServer from '../../metric-server/index.mjs';
 const pixel = new Buffer.from('R0lGODlhAQABAJAAAP8AAAAAACH5BAUQAAAALAAAAAABAAEAAAICBAEAOw==','base64');
 
 export default class Ping {
