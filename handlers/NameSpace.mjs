@@ -55,7 +55,7 @@ export default class NameSpace {
         let result = await this.collection.aggregate(query).toArray();
         if (id && result) {
             result = result[0];
-            if (result.refinery) {
+            if (result && result.refinery) {
                 let available = {};
                 result.refinery.sort((a,b)=>{
                     a = NameSpace.refinery[a];
