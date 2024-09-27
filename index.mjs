@@ -9,7 +9,7 @@ import Accumulator from "./handlers/Accumulator.mjs";
 import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import path from "path";
-import Componentry from "../componentry/index.mjs";
+import Componentry from "@metric-im/componentry";
 
 export default class MetricServer extends Componentry.Module {
     constructor(connector) {
@@ -100,4 +100,13 @@ export default class MetricServer extends Componentry.Module {
         // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
     }
+}
+export async function getApi(db,options) {
+    let componentry = {}
+    componentry = typeof(db)==='string'
+      ?{profile:Object.assign({mongo:{host:db}},options)}
+      :{profile:options,db:db};
+    const connector = await Componentry.Connector.mint(componentry);
+    let instance = await MetricServer.mint(connector);
+    return instance._api;
 }
