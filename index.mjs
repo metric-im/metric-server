@@ -72,12 +72,13 @@ export default class MetricServer extends Componentry.Module {
             redact:new Redact(instance.connector,this.collectionName),
             analysis:new Analysis(instance.connector,this.collectionName)
         }
-        instance._api = {
+        // Extend the internal metric handlers to the rest of the app through connector.api.
+        instance.connector.api = {
             ping:instance.handlers.ping.execute.bind(instance.handlers.ping),
             pull:instance.handlers.pull.execute.bind(instance.handlers.pull),
-            initializeEvent:instance.initializeEvent,
-            connector:instance.connector
-        }
+            initializeEvent:instance.initializeEvent.bind(instance)
+        };
+
         return instance;
     }
     static async getApi(db,options) {

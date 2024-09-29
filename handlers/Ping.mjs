@@ -42,7 +42,7 @@ export default class Ping {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
                 let body = Object.assign({},req.body,req.query);
-                let result = this.execute(body);
+                let result = await this.execute(body);
                 switch(req.params.format) {
                     case "json":
                         res.json(result);
