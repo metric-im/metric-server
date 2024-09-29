@@ -65,19 +65,20 @@ export default class MetricServer extends Componentry.Module {
         instance.Accumulator = await Accumulator.mint(instance.rootPath);
         NameSpace.Accumulator = instance.Accumulator;
         NameSpace.refinery = instance.refinery;
-        instance.handlers = {
+        instance.handler = {
             ping:new Ping(instance.connector,this.collectionName),
             pull:new Pull(instance.connector,this.collectionName),
             ontology:new Ontology(instance.connector,this.collectionName),
             redact:new Redact(instance.connector,this.collectionName),
             analysis:new Analysis(instance.connector,this.collectionName)
         }
-        instance._api = {
-            ping:instance.handlers.ping.execute.bind(instance.handlers.ping),
-            pull:instance.handlers.pull.execute.bind(instance.handlers.pull),
-            initializeEvent:instance.initializeEvent,
-            connector:instance.connector
-        }
+        // Extend the internal metric handlers to the rest of the app through connector.api.
+        instance.connector.api = {
+            ping:instance.handler.ping.execute.bind(instance.handler.ping),
+            pull:instance.handler.pull.execute.bind(instance.handler.pull),
+            initializeEvent:instance.initializeEvent.bind(instance)
+        };
+
         return instance;
     }
     static async getApi(db,options) {
@@ -92,11 +93,11 @@ export default class MetricServer extends Componentry.Module {
     routes() {
         let router = express.Router();
         // set routes services
-        router.use('/ping',this.handlers.ping.routes());
-        router.use('/pull',this.handlers.pull.routes());
-        router.use('/ontology',this.handlers.ontology.routes());
-        router.use('/redact',this.handlers.redact.routes());
-        router.use('/analysis',this.handlers.analysis.routes());
+        router.use('/ping',this.handler.ping.routes());
+        router.use('/pull',this.handler.pull.routes());
+        router.use('/ontology',this.handler.ontology.routes());
+        router.use('/redact',this.handler.redact.routes());
+        router.use('/analysis',this.handler.analysis.routes());
         // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
     }
