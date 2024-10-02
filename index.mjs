@@ -81,14 +81,16 @@ export default class MetricServer extends Componentry.Module {
 
         return instance;
     }
+    static get Connector() {
+        return Componentry.Connector;
+    }
     static async getApi(db,options) {
-        let componentry = {}
-        componentry = typeof(db)==='string'
+        const componentry = typeof(db)==='string'
           ?{profile:Object.assign({mongo:{host:db}},options)}
           :{profile:options,db:db};
-        const connector = await Componentry.Connector.mint(componentry);
+        const connector = await ConnectorStub.mint(componentry);
         let instance = await MetricServer.mint(connector);
-        return instance._api;
+        return instance.connector.api;
     }
     routes() {
         let router = express.Router();
@@ -102,12 +104,36 @@ export default class MetricServer extends Componentry.Module {
         return router;
     }
 }
-export async function getApi(db,options) {
-    let componentry = {}
-    componentry = typeof(db)==='string'
-      ?{profile:Object.assign({mongo:{host:db}},options)}
-      :{profile:options,db:db};
-    const connector = await Componentry.Connector.mint(componentry);
-    let instance = await MetricServer.mint(connector);
-    return instance._api;
+import mongodb from 'mongodb';
+export class ConnectorStub {
+    constructor(componentry) {
+        this.componentry = componentry
+        this.profile = componentry.profile;
+        // this.idForge = IdForge;
+    }
+
+    /**
+     * Mint is an async implementation for new Connector
+     * @param profile PROD, DEV or STAGING
+     * @returns Connector
+     */
+    static async mint(componentry) {
+        let connector = new ConnectorStub(componentry);
+        if (connector.profile.init) await connector.profile.init();
+        if (componentry.db) {
+            connector.db = componentry.db
+        } else if (connector.profile.mongo) {
+            connector.MongoClient = mongodb.MongoClient;
+            let mongo = await connector.MongoClient.connect(
+              connector.profile.mongo.host,
+              {useNewUrlParser:true,useUnifiedTopology:true}
+            );
+            connector.db = mongo.db();
+        }
+        return connector;
+    }
+    get acl() {
+        return 2;
+    }
 }
+
