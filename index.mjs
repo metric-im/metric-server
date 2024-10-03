@@ -34,25 +34,35 @@ export default class MetricServer extends Componentry.Module {
             'hammer.min.js.map':'/hammerjs/hammer.min.js.map',
         };
     }
-    initializeEvent(account,ns,req) {
-        let body = {
-            _id:this.connector.idForge.datedId(),
-            _account:account,
-            _ns:ns,
-            _time: new Date(),
-        }
-        // If it's a web event pull context from the request
-        if (req) {
-            body.hostname = req.hostname;
-            body.url = req.url
-            body._origin = {
-                ip: req.headers['x-forwarded-for'] || req.ip,
-                ua: req.get('User-Agent')
+    initializeEvent(account,req) {
+        try {
+            let parts = req.params[0].split('/');
+            let format = 'json';
+            if (parts.length > 1) format = parts.shift();
+            let namespace = parts.shift();
+            let ns = req.params[1];
+            let body = Object.assign( {},req.query,{
+                _id:this.connector.idForge.datedId(),
+                _account:account,
+                _ns:namespace,
+                _time: new Date(),
+            })
+            // If it's a web event pull context from the request
+            if (req) {
+                body.hostname = req.hostname;
+                body.url = req.url
+                body._origin = {
+                    ip: req.headers['x-forwarded-for'] || req.ip,
+                    ua: req.get('User-Agent')
+                }
+                if (body._origin.ip === '::1') body._origin.ip = '208.157.149.67'; ///TODO: For dev purposes, remove
+                if (body._origin.ip === '::ffff:127.0.0.1') body._origin.ip = req.headers['x-forwarded-for'];
             }
-            if (body._origin.ip === '::1') body._origin.ip = '208.157.149.67'; ///TODO: For dev purposes, remove
-            if (body._origin.ip === '::ffff:127.0.0.1') body._origin.ip = req.headers['x-forwarded-for'];
+            return body;
+        } catch(e) {
+            console.log("Error parsing event:\n"+e);
+            throw("Error parsing event");
         }
-        return body;
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
@@ -82,13 +92,13 @@ export default class MetricServer extends Componentry.Module {
         return instance;
     }
     static async getApi(db,options) {
-        let componentry = {}
-        componentry = typeof(db)==='string'
+        const componentry = typeof(db)==='string'
           ?{profile:Object.assign({mongo:{host:db}},options)}
           :{profile:options,db:db};
-        const connector = await Componentry.Connector.mint(componentry);
+        componentry.idForge = Componentry.IdForge;
+        const connector = await ConnectorStub.mint(componentry);
         let instance = await MetricServer.mint(connector);
-        return instance._api;
+        return instance.connector.api;
     }
     routes() {
         let router = express.Router();
@@ -102,12 +112,36 @@ export default class MetricServer extends Componentry.Module {
         return router;
     }
 }
-export async function getApi(db,options) {
-    let componentry = {}
-    componentry = typeof(db)==='string'
-      ?{profile:Object.assign({mongo:{host:db}},options)}
-      :{profile:options,db:db};
-    const connector = await Componentry.Connector.mint(componentry);
-    let instance = await MetricServer.mint(connector);
-    return instance._api;
+import mongodb from 'mongodb';
+export class ConnectorStub {
+    constructor(componentry) {
+        this.componentry = componentry
+        this.profile = componentry.profile;
+        this.idForge = componentry.idForge;
+    }
+
+    /**
+     * Mint is an async implementation for new Connector
+     * @param profile PROD, DEV or STAGING
+     * @returns Connector
+     */
+    static async mint(componentry) {
+        let connector = new ConnectorStub(componentry);
+        if (connector.profile.init) await connector.profile.init();
+        if (componentry.db) {
+            connector.db = componentry.db
+        } else if (connector.profile.mongo) {
+            connector.MongoClient = mongodb.MongoClient;
+            let mongo = await connector.MongoClient.connect(
+              connector.profile.mongo.host,
+              {useNewUrlParser:true,useUnifiedTopology:true}
+            );
+            connector.db = mongo.db();
+        }
+        return connector;
+    }
+    get acl() {
+        return 2;
+    }
 }
+

@@ -97,7 +97,7 @@ export default class Ping {
      * @param req
      * @returns {Promise<{}>}
      */
-    async embelishBody(body) {
+    async embellishBody(body) {
         let context = {};
         if (body._origin) {
             // query string _origin needs to be parsed. This is mostly a DEBUG feature
@@ -117,7 +117,7 @@ export default class Ping {
         body = this.castFields(body,fieldmap);
         body._time = body._time?new Date(body._time):new Date();
         body._id = this.connector.idForge.datedId();
-        for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+        //TODO: restore for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
         return body;
     }
     async execute(body={}) {
@@ -125,13 +125,13 @@ export default class Ping {
             if (Array.isArray(body)) {
                 let writes = [];
                 for (let o of body) {
-                    let body = await this.embelishBody(o);
+                    let body = await this.embellishBody(o);
                     writes.push({insertOne:{document:body}});
                 }
                 let result = await this.collection.bulkWrite(writes);
                 return result;
             } else {
-                body = await this.embelishBody(body);
+                body = await this.embellishBody(body);
                 let result = await this.collection.insertOne(body);
                 return result;
             }
