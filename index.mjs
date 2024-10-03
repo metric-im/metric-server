@@ -91,9 +91,6 @@ export default class MetricServer extends Componentry.Module {
 
         return instance;
     }
-    static get Connector() {
-        return Componentry.Connector;
-    }
     static async getApi(db,options) {
         const componentry = typeof(db)==='string'
           ?{profile:Object.assign({mongo:{host:db}},options)}
