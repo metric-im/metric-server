@@ -1,6 +1,29 @@
 # server
 Metric IM server for pinging, linking and reporting
 
+## Usage
+
+### Web Api
+See https://metric.im/#Wiki/MetricReference for url syntax
+
+### Import Api
+A host may import metric-server `import MetricServer from '@metric-im/metric-server'` and invoke the Api
+directly.
+```javascript
+import MetricServer from '@metric-im/metric-server'
+const metricApi = await MetricServer.getApi(componentry.connector.db,{});
+app.get('/metric/ping/*',async (req,res)=>{
+  let eventBody = metricApi.initializeEvent('73bedford',req);
+  await metricApi.ping(Object.assign(eventBody)); // Ping body is namespace and custom data
+  res.status(200).send();
+})
+```
+client...
+```javascript
+// Record an event for namespace, 'view', with attributes given in the query string
+await API.get(`/metric/ping/view?page=${this.context.page}`)
+```
+
 ## Reserved Attribute Names
 * year - YYYY
 * monthName - January, February, ...

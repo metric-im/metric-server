@@ -34,25 +34,35 @@ export default class MetricServer extends Componentry.Module {
             'hammer.min.js.map':'/hammerjs/hammer.min.js.map',
         };
     }
-    initializeEvent(account,ns,req) {
-        let body = {
-            _id:this.connector.idForge.datedId(),
-            _account:account,
-            _ns:ns,
-            _time: new Date(),
-        }
-        // If it's a web event pull context from the request
-        if (req) {
-            body.hostname = req.hostname;
-            body.url = req.url
-            body._origin = {
-                ip: req.headers['x-forwarded-for'] || req.ip,
-                ua: req.get('User-Agent')
+    initializeEvent(account,req) {
+        try {
+            let parts = req.params[0].split('/');
+            let format = 'json';
+            if (parts.length > 1) format = parts.shift();
+            let namespace = parts.shift();
+            let ns = req.params[1];
+            let body = Object.assign( {},req.query,{
+                _id:this.connector.idForge.datedId(),
+                _account:account,
+                _ns:namespace,
+                _time: new Date(),
+            })
+            // If it's a web event pull context from the request
+            if (req) {
+                body.hostname = req.hostname;
+                body.url = req.url
+                body._origin = {
+                    ip: req.headers['x-forwarded-for'] || req.ip,
+                    ua: req.get('User-Agent')
+                }
+                if (body._origin.ip === '::1') body._origin.ip = '208.157.149.67'; ///TODO: For dev purposes, remove
+                if (body._origin.ip === '::ffff:127.0.0.1') body._origin.ip = req.headers['x-forwarded-for'];
             }
-            if (body._origin.ip === '::1') body._origin.ip = '208.157.149.67'; ///TODO: For dev purposes, remove
-            if (body._origin.ip === '::ffff:127.0.0.1') body._origin.ip = req.headers['x-forwarded-for'];
+            return body;
+        } catch(e) {
+            console.log("Error parsing event:\n"+e);
+            throw("Error parsing event");
         }
-        return body;
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
@@ -88,6 +98,7 @@ export default class MetricServer extends Componentry.Module {
         const componentry = typeof(db)==='string'
           ?{profile:Object.assign({mongo:{host:db}},options)}
           :{profile:options,db:db};
+        componentry.idForge = Componentry.IdForge;
         const connector = await ConnectorStub.mint(componentry);
         let instance = await MetricServer.mint(connector);
         return instance.connector.api;
@@ -109,7 +120,7 @@ export class ConnectorStub {
     constructor(componentry) {
         this.componentry = componentry
         this.profile = componentry.profile;
-        // this.idForge = IdForge;
+        this.idForge = componentry.idForge;
     }
 
     /**
