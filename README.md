@@ -13,11 +13,12 @@ directly.
 import MetricServer from '@metric-im/metric-server'
 const metricApi = await MetricServer.getApi(componentry.connector.db,{});
 app.get('/metric/ping/*',async (req,res)=>{
-  let eventBody = metricApi.initializeEvent('73bedford',req);
+  let eventBody = metricApi.initializeEvent('AccountName',req);
   await metricApi.ping(Object.assign(eventBody)); // Ping body is namespace and custom data
   res.status(200).send();
 })
 ```
+NOTE: AccountName is arbitrary. MetricServer does not employ Access Control when imported
 client...
 ```javascript
 // Record an event for namespace, 'view', with attributes given in the query string
