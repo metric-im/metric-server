@@ -19,12 +19,9 @@ export default class Pull {
             if (req.account && req.account.id) next();
             else res.status(401).send();
         });
-        router.all("/:format/:ns/:dimensions/:metrics", async (req, res) => {
+        router.all("/*", async (req, res) => {
             try {
-                let pathParts = this.parsePath(req.path);
-                let format = pathParts.shift()
-                let results = await this.execute(req.account,pathParts,req.query);
-                await this.deliver(res,results,format);
+                await this.execute(req.account,req.params[0],req.query,res);
             } catch(e) {
                 console.error(e);
                 return res.status(400).send("error parsing request: "+e.message);
