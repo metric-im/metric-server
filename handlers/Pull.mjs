@@ -130,28 +130,31 @@ export default class Pull {
             if (options.sort) statement.push({$sort: Parser.sort(options.sort)});
             // limit can be misleading because of the rearrangement of results.
             if (options.limit) statement.push({$limit: parseInt(options.limit)});
-            if (options._inspect) results = statement;
-            else results = await this.collection.aggregate(statement).toArray();
+            // Expose the query string to be executed for experimentation and debugging
+            if (!!options._inspect) return (res?res.json(statement):statement);
+            // Execute the query
+            results = await this.collection.aggregate(statement).toArray();
             if (options._stash) this.stash.put(req.account,req.url,results,options._stash);
         }
         // postprocess results
-        if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
-        if (options.sort) {
-            let sort = Parser.sort(options.sort);
-            results.sort((a,b)=>{
-                for (let [key,val] of Object.entries(sort)) {
-                    if (a[key] === b[key]) continue;
-                    else if (a[key === null]) return val;
-                    else if (b[key === null]) return -val;
-                    else if (a[key] > b[key]) return val;
-                    else return -val;
-                }
-                return 0;
-            })
+        if (!options._inspect) {
+            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
+            if (options.sort) {
+                let sort = Parser.sort(options.sort);
+                results.sort((a,b)=>{
+                    for (let [key,val] of Object.entries(sort)) {
+                        if (a[key] === b[key]) continue;
+                        else if (a[key === null]) return val;
+                        else if (b[key === null]) return -val;
+                        else if (a[key] > b[key]) return val;
+                        else return -val;
+                    }
+                    return 0;
+                })
+            }
+            if (options.last) results = results.slice(-parseInt(options.last));
+            if (options.first) results = results.slice(0,parseInt(options.first));
         }
-        if (options.last) results = results.slice(-parseInt(options.last));
-        if (options.first) results = results.slice(0,parseInt(options.first));
-
         if (res) {
             // Run the selected formatter with the additional strings delimited by dots provided as options
             const format = path.format.split('.');
