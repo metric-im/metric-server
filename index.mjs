@@ -140,8 +140,17 @@ export class ConnectorStub {
         }
         return connector;
     }
+
+    /**
+     * Grant all ACL requests owner access to the host system. Override the stub
+     * to tune access control if desired.
+     * @returns {{test: (function(): {all: function(): number, owner: function(): number, read: function(): number, write: function(): number}), get: (function(): {all: function(): number, owner: function(): number, read: function(): number, write: function(): number}), assign: (function(): {all: function(): number, owner: function(): number, read: function(): number, write: function(): number})}}
+     */
     get acl() {
-        return 2;
+        return {assign:this.level,test:this.level,get:this.level}
+    }
+    get level() {
+        return {all:()=>true,read:()=>true,write:()=>true,owner:()=>true}
     }
 }
 

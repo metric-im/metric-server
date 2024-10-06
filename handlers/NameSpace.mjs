@@ -53,8 +53,8 @@ export default class NameSpace {
             query.unshift({$match:{_id:{$in:ids}}});
         }
         let result = await this.collection.aggregate(query).toArray();
+        result = result[0];
         if (id && result) {
-            result = result[0];
             if (result && result.refinery) {
                 let available = {};
                 result.refinery.sort((a,b)=>{
@@ -65,7 +65,7 @@ export default class NameSpace {
                 })
             }
         }
-        return result || [];
+        return result || {};
     }
     async fields(account,ns) {
         let ancestry = [];
