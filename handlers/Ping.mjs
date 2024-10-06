@@ -117,7 +117,7 @@ export default class Ping {
         body = this.castFields(body,fieldmap);
         body._time = body._time?new Date(body._time):new Date();
         body._id = this.connector.idForge.datedId();
-        //TODO: restore for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+        for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
         return body;
     }
     async execute(body={}) {

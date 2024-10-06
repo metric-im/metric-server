@@ -48,9 +48,12 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex;height:100%"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
-            + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
-            + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
-            + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
+        + `<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>`
+        + `<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>`
+        + `<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>`
+        // + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
+        // + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
+        // + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
         let body =
                 `<div style="${trayStyle}">
                     <div id="container" style="${containerStyle}"><canvas id="canvas"></canvas></div>
