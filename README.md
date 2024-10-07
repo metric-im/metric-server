@@ -158,7 +158,6 @@ attributes are inserted as hover text. The following rendering options are avail
 * map.heat - visualize the concentration of points
 
 ### Common Format options.
-
 * *.nolegend* - Hides the label text on graphs. For example, `/chart.bar.nolegend`
 * *.file* - returns a file with the results rather than displaying on screen. Not available for graphs or maps.
 
@@ -179,8 +178,17 @@ Geographic Activity (activity centered in a country indicates we have no further
 ```http request
 /pull/map.heat/sezus/_id/latitude:last,longitude:last
 ```
+Total number of posts... all events where action is 'create'
+```http request
+/pull/json/sezus/action:create/_count
+--or--
+/pull/json/sezus/action/_count?where=action:create
+```
 
 ## <a name="InitializeEvent"></a>initializeEvent()
+InitializeEvent is a convenience function. It reads the expressjs request object for context data.
+Source data, such as the user agent string and IP address, is placed in the _origin block of the event. This can
+be used by the refiners, but is not stored with the event record when PII is a concern.
 
 ## <a name="EventOntology"></a>ontology()
 The ontology defines the meta data behind the namespaces and attribute. This is generally used only by the system.
