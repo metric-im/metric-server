@@ -46,16 +46,8 @@ export default class NameSpace {
                 let ns = await this.collection.findOne({_id:id});
                 if (!ns || ns.availability !== "public") return null;
             }
-            query.unshift({$match: {_id: id}});
-        } else {
-            let ids = await this.connector.acl.get[this.accessLevels[level]]({account:account.id},"namespace");
-            ids = ids.map(a=>a._id.namespace);
-            query.unshift({$match:{_id:{$in:ids}}});
-        }
-        let result = await this.collection.aggregate(query).toArray();
-        result = result[0];
-        if (id && result) {
-            if (result && result.refinery) {
+            let result = await this.collection.findOne({_id:id})
+            if (result?.refinery) {
                 let available = {};
                 result.refinery.sort((a,b)=>{
                     a = NameSpace.refinery[a];
@@ -64,8 +56,12 @@ export default class NameSpace {
                     return 1;
                 })
             }
+            return result;
+        } else {
+            let ids = await this.connector.acl.get[this.accessLevels[level]]({account:account.id},"namespace");
+            ids = ids.map(a=>a._id.namespace);
+            return await this.collection.find({_id:{$in:ids}}).sort({_id:1}).toArray();
         }
-        return result || {};
     }
     async fields(account,ns) {
         let ancestry = [];
