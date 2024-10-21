@@ -42,7 +42,7 @@ export default class Ping {
                 let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
                 if (!ns) return res.status(401).send();
                 let body = Object.assign({},req.body,req.query);
-                let result = await this.execute(body);
+                let result = await this.execute(body,ns);
                 switch(req.params.format) {
                     case "json":
                         res.json(result);
@@ -97,7 +97,7 @@ export default class Ping {
      * @param req
      * @returns {Promise<{}>}
      */
-    async embellishBody(body) {
+    async embellishBody(body,ns) {
         let context = {};
         if (body._origin) {
             // query string _origin needs to be parsed. This is mostly a DEBUG feature
@@ -113,25 +113,26 @@ export default class Ping {
             }
             delete body._origin;
         }
-        let fieldmap = await this.ontology.nameSpace.fields(body._account,body._ns)
+        let fieldmap = await this.ontology.nameSpace.fields(body._account,ns||body._ns)
         body = this.castFields(body,fieldmap);
         body._time = body._time?new Date(body._time):new Date();
         body._id = this.connector.idForge.datedId();
-        for (let refiner of body._ns.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
+        for (let refiner of ns?.refinery||[]) await NameSpace.refinery[refiner].process(context,body);
         return body;
     }
-    async execute(body={}) {
+    async execute(body={},ns) {
         try {
+            if (!ns) ns = await this.ontology.nameSpace.get(body._account,body._ns)
             if (Array.isArray(body)) {
                 let writes = [];
                 for (let o of body) {
-                    let body = await this.embellishBody(o);
+                    let body = await this.embellishBody(o,ns);
                     writes.push({insertOne:{document:body}});
                 }
                 let result = await this.collection.bulkWrite(writes);
                 return result;
             } else {
-                body = await this.embellishBody(body);
+                body = await this.embellishBody(body,ns);
                 let result = await this.collection.insertOne(body);
                 return result;
             }

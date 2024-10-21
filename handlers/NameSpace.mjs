@@ -41,12 +41,11 @@ export default class NameSpace {
     async get(account,id,level=1) {
         let query = [{$sort:{_id:1}}];
         if (id) {
+            let result = await this.collection.findOne({_id:id})
             let access = await this.connector.acl.test[this.accessLevels[level]]({account: account.id}, {namespace: id});
             if (!access && account.super !== true) {
-                let ns = await this.collection.findOne({_id:id});
-                if (!ns || ns.availability !== "public") return null;
+                if (!result || result.availability !== "public") return null;
             }
-            let result = await this.collection.findOne({_id:id})
             if (result?.refinery) {
                 let available = {};
                 result.refinery.sort((a,b)=>{

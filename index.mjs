@@ -40,7 +40,6 @@ export default class MetricServer extends Componentry.Module {
             let format = 'json';
             if (parts.length > 1) format = parts.shift();
             let namespace = parts.shift();
-            let ns = req.params[1];
             let body = Object.assign( {},req.query,{
                 _id:this.connector.idForge.datedId(),
                 _account:account,
