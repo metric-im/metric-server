@@ -157,9 +157,36 @@ attributes are inserted as hover text. The following rendering options are avail
 * map.path - trace a line from each point
 * map.heat - visualize the concentration of points
 
-### Common Format options.
+#### Common Format options.
 * *.nolegend* - Hides the label text on graphs. For example, `/chart.bar.nolegend`
 * *.file* - returns a file with the results rather than displaying on screen. Not available for graphs or maps.
+
+### Dimension Qualifiers
+
+A dimension name can be followed by a colon and a qualifier to limit the result set for the dimension.
+The dimension is included in the result set as usual. An understanding mongo syntax is helpful. 
+
+`name:value`
+
+Adds to the where clause as, `{"name":"value:}`. For example, `country:US` becomes `{$where:{country:"US"}}`
+
+If value is in curly brackets it is considered a syntactically loose JSON object. For example
+`country:{exists:true}` is added as `{$where:{country:{$exists:true}}}`
+
+If value is in square braces it interpreted as a where-in clause. For example `country:[US,RU]`
+becomes `{$where:{country:{$in:["US","RU"]}}}`
+
+If value is in parentheses it is interpreted as a foreign _id lookup. For example `country:(countries,name)`
+adds a $lookup to the query pipeline as
+```
+{$lookup:{from:"countries",localField:"country",foreignField:"_id",as:"country}}
+{$unwind:"country"}
+{$project:{"country.name":"name"}}
+```
+The first parameter given in the parens is the collection name. The one or more following parameters are
+included as dimensions.
+>*NOTE:* Lookup qualifiers is not yet fully implemented
+
 
 ### Pull examples
 Number of posts by day
