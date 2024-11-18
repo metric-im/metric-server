@@ -44,29 +44,40 @@ export default class DimPath {
             if (key.value) {
                 let matchRange = key.value.match(/^([A-Za-b0-9-_]*)~(.*)$/);
                 if (matchRange) {
-                    if (matchRange[1]) key.filters.push({[key.name]:{$gte:this.parseValue(key.name,matchRange[1])}});
-                    if (matchRange[2]) key.filters.push({[key.name]:{$lte:this.parseValue(key.name,matchRange[2])}});
+                    let stage = {$match:{}}
+                    if (matchRange[1]) stage.$match[key.name] = {$gte:this.parseValue(key.name,matchRange[1])};
+                    if (matchRange[2]) stage.$match[key.name] = {$lte:this.parseValue(key.name,matchRange[2])};
+                    key.filters.push(stage);
                     continue;
                 }
                 let matchMongo = key.value.match(/^(\{.+\})$/);
                 if (matchMongo) {
                     let obj = Parser.objectify(matchMongo[1]);
-                    key.filters.push({[key.name]:obj});
+                    key.filters.push({$match:{[key.name]:obj}});
                     continue;
                 }
                 let matchSet = key.value.match(/^(\[.+\])$/);
                 if (matchSet) {
                     let obj = Parser.objectify(`{$in:${matchSet[1]}}`);
-                    key.filters.push({[key.name]:obj});
+                    key.filters.push({$match:{[key.name]:obj}});
                     continue;
                 }
-                key.filters.push({[key.name]:this.parseValue(key.name,key.value)});
+                //TODO: Finish and add data security controls
+                // let matchLookup = key.value.match(/^\((.+)\)$/);
+                // if (matchLookup) {
+                //     let params = matchLookup[1].split(',');
+                //     let collection = params.shift();
+                //     if (params.length===0) params.unshift('name'); // default field to project
+                //     params = params.reduce((r,o)=>{r[key.name+'.'+o]=1;return r},{})
+                //     key.filters.push({$lookup:{from:collection,localField:key.name,foreignField:'_id',as:key.name}});
+                //     key.filters.push({$project:params});
+                //     key.filters.push({$unwind:'$'+key.name});
+                //     continue;
+                // }
+                key.filters.push({$match:{[key.name]:this.parseValue(key.name,key.value)}});
             }
         }
         this.filters = this.dimensions.reduce((r,d)=>{return r.concat(d.filters)},[]);
-        if (this.filters.length > 1) this.filters = {$and:this.filters};
-        else if (this.filters.length > 0) this.filters = this.filters[0];
-        else this.filters = {};
     }
 
     /**

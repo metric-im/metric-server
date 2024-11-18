@@ -87,7 +87,7 @@ export default class Pull {
             statement = statement.concat(dp.expandDerivedFields());
 
             // add any filters built into the dimensions request
-            if (Object.keys(dp.filters).length > 0) statement.push({$match:dp.filters});
+            for (let filter of dp.filters) statement.push(filter);
             // group by metrics
             let group = {_id: {}};
             let project = {_id: 0, '_ns': '$_id._ns'};
