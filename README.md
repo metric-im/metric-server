@@ -181,11 +181,11 @@ adds a $lookup to the query pipeline as
 ```
 {$lookup:{from:"countries",localField:"country",foreignField:"_id",as:"country}}
 {$unwind:"country"}
-{$project:{"country.name":"name"}}
+{$project:{"country.name":"$name"}}
 ```
 The first parameter given in the parens is the collection name. The one or more following parameters are
 included as dimensions.
->*NOTE:* Lookup qualifiers is not yet fully implemented
+>*NOTE:* Lookup qualifiers are not yet fully implemented
 
 
 ### Pull examples
