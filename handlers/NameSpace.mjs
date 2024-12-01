@@ -88,6 +88,10 @@ export default class NameSpace {
                 return r;
             },{}));
         }
+        map = Object.keys(map).sort().reduce((r,key)=>{
+            r[key] = map[key];
+            return r;
+        },{})
         return map;
     }
     async accumulators(account,ns) {
