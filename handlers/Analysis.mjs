@@ -1,5 +1,7 @@
 /**
  * Provide analysis of the date set for a namespace
+ *
+ * DEPRECATED use /schema
  */
 import Ontology from './Ontology.mjs';
 import express from 'express';

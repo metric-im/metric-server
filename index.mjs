@@ -4,6 +4,7 @@ import Pull from './handlers/Pull.mjs';
 import Ontology from './handlers/Ontology.mjs';
 import NameSpace from './handlers/NameSpace.mjs';
 import Redact from './handlers/Redact.mjs';
+import Schema from './handlers/Schema.mjs';
 import Analysis from './handlers/Analysis.mjs';
 import Accumulator from "./handlers/Accumulator.mjs";
 // import Stash from './handlers/Stash.mjs';
@@ -79,12 +80,14 @@ export default class MetricServer extends Componentry.Module {
             pull:new Pull(instance.connector,this.collectionName),
             ontology:new Ontology(instance.connector,this.collectionName),
             redact:new Redact(instance.connector,this.collectionName),
+            schema:new Schema(instance.connector,this.collectionName),
             analysis:new Analysis(instance.connector,this.collectionName)
         }
         // Extend the internal metric handlers to the rest of the app through connector.api.
         instance.connector.api = {
             ping:instance.handlers.ping.execute.bind(instance.handlers.ping),
             pull:instance.handlers.pull.execute.bind(instance.handlers.pull),
+            schema:instance.handlers.schema.execute.bind(instance.handlers.schema),
             initializeEvent:instance.initializeEvent.bind(instance)
         };
 
@@ -106,6 +109,7 @@ export default class MetricServer extends Componentry.Module {
         router.use('/pull',this.handlers.pull.routes());
         router.use('/ontology',this.handlers.ontology.routes());
         router.use('/redact',this.handlers.redact.routes());
+        router.use('/schema',this.handlers.schema.routes());
         router.use('/analysis',this.handlers.analysis.routes());
         // router.use('/stash',(new Stash(this.connector)).routes());
         return router;
