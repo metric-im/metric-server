@@ -1,9 +1,10 @@
 import Parser from './Parser.mjs';
+import Ontology from './Ontology.mjs';
 
 export default class DimPath {
-    constructor(fieldMap,connector) {
+    constructor(connector) {
         this.connector = connector;
-        this.fieldMap = fieldMap;
+        this.ontology = new Ontology(connector);
         this.dimensions = [];
         this.metrics = [];
         this._ASSIGN = "assign";
@@ -12,6 +13,24 @@ export default class DimPath {
         this._SPREAD = "spread";
         this._COMBINE = "combine";
         this._SKIP = "skip";
+    }
+    static async mint(connector,account,path) {
+        try {
+            let instance = new DimPath(connector);
+            instance.accumulators = {};
+            instance.fieldMap = {};
+            for (let ns of path.namespaces) {
+                ns = await instance.ontology.nameSpace.get(account,ns,1);
+                if (!ns) throw(new Error("Namespace unknown"));
+                Object.assign(instance.accumulators,await instance.ontology.nameSpace.accumulators(account,ns));
+                // parse fieldMap from the namespaces requested (usually just one)
+                Object.assign(instance.fieldMap,await instance.ontology.nameSpace.fields(account,ns));
+            }
+            instance.parse(path.dimensions,path.metrics);
+            return instance;
+        } catch(e) {
+            throw(400);
+        }
     }
     get hasCompressors() {
         return this.dimensions.some(d=>d.compressor);

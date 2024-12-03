@@ -3,14 +3,12 @@
  */
 import Parser from './Parser.mjs';
 import DimPath from './DimPath.mjs';
-import Ontology from './Ontology.mjs';
 import express from 'express';
 import crypto from "crypto";
 export default class Pull {
     constructor(connector,collection='event') {
         this.connector = connector;
         this.collection = this.connector.db.collection(collection);
-        this.ontology = new Ontology(connector);
         this.stash = new Stash();
     }
     routes() {
@@ -52,22 +50,7 @@ export default class Pull {
     async execute(account,path,options,res) {
         if (typeof path === 'string') path = this.parsePath(path);
         if (typeof account === 'string') account = {id:account};
-        let accumulators = {};
-        let fieldMap = {};
-        for (let ns of path.namespaces) {
-            ns = await this.ontology.nameSpace.get(account,ns,1);
-            if (!ns) throw(new Error("Namespace unknown"));
-            Object.assign(accumulators,await this.ontology.nameSpace.accumulators(account,ns));
-            // parse fieldMap from the namespaces requested (usually just one)
-            Object.assign(fieldMap,await this.ontology.nameSpace.fields(account,ns));
-        }
-        // parse dimensions and metrics with DimensionPath helper
-        this.dp = new DimPath(fieldMap,this.connector);
-        try {
-            this.dp.parse(path.dimensions,path.metrics);
-        } catch(e) {
-            throw(400);
-        }
+        let dp = await DimPath.mint(this.connector,account,path);
 
         // Check for stashed results
         let results = null;
@@ -84,19 +67,19 @@ export default class Pull {
                 )
             });
             // add derived fields
-            statement = statement.concat(this.dp.expandDerivedFields());
+            statement = statement.concat(dp.expandDerivedFields());
 
             // add any filters built into the dimensions request
-            for (let filter of this.dp.filters) statement.push(filter);
+            for (let filter of dp.filters) statement.push(filter);
             // group by metrics
             let group = {_id: {}};
             let project = {_id: 0, '_ns': '$_id._ns'};
-            for (let dimension of this.dp.dimensions) {
-                if (dimension.compressor === this.dp._SKIP) continue;
+            for (let dimension of dp.dimensions) {
+                if (dimension.compressor === dp._SKIP) continue;
                 group._id[dimension.name] = `$${dimension.name}`
                 project[dimension.name] = '$_id.' + dimension.name;
             }
-            for (let metric of this.dp.metrics) {
+            for (let metric of dp.metrics) {
                 if (metric.name === '_count') {
                     // builtin method for aggregating result count, result is displayed as _count;
                     group[metric.name] = {['$sum']: 1};
@@ -104,10 +87,10 @@ export default class Pull {
                     continue;
                 }
                 // an undefined accumulator is assumed to be mongo native
-                if (!accumulators[metric.method]) {
+                if (!dp.accumulators[metric.method]) {
                     group[metric.name] = {['$' + metric.method]: '$' + metric.name};
                 } else {
-                    let accumulator = new accumulators[metric.method](metric.name);
+                    let accumulator = new dp.accumulators[metric.method](metric.name);
                     Object.assign(group,accumulator.$accumulator(...metric.methodArgs));
                 }
                 project[metric.name] = 1;
@@ -115,11 +98,11 @@ export default class Pull {
             statement.push({$group: group});
             statement.push({$project: project});
             // add/overwrite fields with projection code
-            statement = statement.concat(this.dp.expandProjectedFields());
+            statement = statement.concat(dp.expandProjectedFields());
 
-            for (let metric of this.dp.metrics) {
-                if (accumulators[metric.method]) {
-                    let accumulator = new accumulators[metric.method](metric.name);
+            for (let metric of dp.metrics) {
+                if (dp.accumulators[metric.method]) {
+                    let accumulator = new dp.accumulators[metric.method](metric.name);
                     let window = accumulator.$setWindowFields(...metric.methodArgs);
                     if (!window) continue;
                     if (!Array.isArray(window)) window = [window];
@@ -138,7 +121,7 @@ export default class Pull {
         }
         // postprocess results
         if (!options._inspect) {
-            if (this.dp.metrics.length > 0 && results.length > 0) results = this.dp.organize(results);
+            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
             if (options.sort) {
                 let sort = Parser.sort(options.sort);
                 results.sort((a,b)=>{
@@ -162,7 +145,7 @@ export default class Pull {
             if (!module) {
                 res.status(400).json({message:'format unavailable'});
             } else {
-                let formatter = new module.default(this.dp,format.slice(1));
+                let formatter = new module.default(dp,format.slice(1));
                 // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
                 await formatter.render(res,results);
             }
