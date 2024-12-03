@@ -5,6 +5,7 @@
  */
 import Ontology from './Ontology.mjs';
 import Pull from './Pull.mjs';
+import DimPath from './DimPath.mjs';
 import express from 'express';
 
 export default class Schema extends Pull {
@@ -15,6 +16,8 @@ export default class Schema extends Pull {
         // run pull in inspect mode to get query statement
         options._inspect = true;
         path = this.parsePath(path);
+
+        let dp = await DimPath.mint(this.connector,account,path);
         let query = [];
         let sampler =
             `function(a){return a.slice(0,3).reduce((r,o)=>{
@@ -22,10 +25,10 @@ export default class Schema extends Pull {
                 r += (typeof(o)==='string')?o.slice(0,30):o;
                 return r; 
             },'')}`
-        query = await super.execute(account,path,options,undefined);
         if (!path.dimensions) {
-            // get all fields instead. Executing super (pull) builds DP so we call it anyways
             query = [{$match:{_ns:{$in:path.namespaces}}}];
+        } else {
+            query = await super.execute(account,path,options,undefined);
         }
         query.push({$sample:{size:500}});
         query.push({$project:{"arrayofkeyvalue":{$objectToArray:"$$ROOT"}}});
@@ -38,8 +41,8 @@ export default class Schema extends Pull {
         results = results.reduce((r,field)=>{
             if (field.type && field.type !== "null") {
                 let o = {name:field.name,type:field.type};
-                o.accumulator = this.dp.fieldMap[field.name]?.accumulator || this.dp.metrics.find(m=>m.name = field.name)?.method || '';
-                o.description = this.dp.fieldMap[field.name]?.description || '';
+                o.accumulator = dp.fieldMap[field.name]?.accumulator || dp.metrics.find(m=>m.name = field.name)?.method || '';
+                o.description = dp.fieldMap[field.name]?.description || '';
                 o.sample = field.sample;
                 r.push(o);
             }
@@ -52,7 +55,7 @@ export default class Schema extends Pull {
             if (!module) {
                 res.status(400).json({message:'format unavailable'});
             } else {
-                let formatter = new module.default(this.dp,format.slice(1));
+                let formatter = new module.default(dp,format.slice(1));
                 // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
                 await formatter.render(res,results);
             }
