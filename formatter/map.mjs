@@ -10,8 +10,8 @@ export default class Map extends Formatter {
     async render(res,data) {
         let trayStyle = "position:relative;display:flex;height:100vh";
         let containerStyle = "flex:1 0;height:100%;width:100%;align-self:center";
-        let scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${this.apikey}&callback=initMap&libraries=visualization`
-        let head = `<meta charset="utf-8"><script async src="${scriptSrc}"></script>`;
+        let scriptSrc = `https://maps.googleapis.com/maps/api/js?key=${this.apikey}&loading=async&callback=initMap&libraries=visualization`
+        let head = `<meta charset="utf-8"><script defer src="${scriptSrc}"></script>`;
         let bodyStyle = `margin:0;padding:0;border:0`;
         let body = `<div style="${trayStyle}"><div id="container" style="${containerStyle}"></div></div>`;
         data = data.filter(r=>(r.latitude!==null&&r.longitude!==null&&r.site!==null));
@@ -23,8 +23,8 @@ export default class Map extends Formatter {
                 document.getElementById('container').innerHTML = "<div style='margin:20px'>No data available</div>";
             </script>\`;
         `:`
-            <script lang="JavaScript">
-                function initMap() {
+            <script async lang="JavaScript">
+                async function initMap() {
                     let map = new google.maps.Map(document.getElementById('container'), {
                         center: {lat:${latAvg}, lng: ${longAvg}},
                         zoom: ${this.zoom}
