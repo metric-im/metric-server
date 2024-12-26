@@ -42,8 +42,8 @@ export default class NameSpace {
         let query = [{$sort:{_id:1}}];
         if (id) {
             let result = await this.collection.findOne({_id:id})
-            let access = await this.connector.acl.test[this.accessLevels[level]]({account: account.id}, {namespace: id});
-            if (!access && account.super !== true) {
+            let access = await this.connector.acl.test[this.accessLevels[level]]({account: account?.id}, {namespace: id});
+            if (!access && account?.super !== true) {
                 if (!result || result.availability !== "public") return null;
             }
             if (result?.refinery) {
@@ -57,7 +57,7 @@ export default class NameSpace {
             }
             return result;
         } else {
-            let ids = await this.connector.acl.get[this.accessLevels[level]]({account:account.id},"namespace");
+            let ids = await this.connector.acl.get[this.accessLevels[level]]({account:account?.id},"namespace");
             ids = ids.map(a=>a._id.namespace);
             return await this.collection.find({_id:{$in:ids}}).sort({_id:1}).toArray();
         }
