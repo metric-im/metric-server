@@ -82,6 +82,9 @@ export default class Chart extends Formatter {
             control.options.scales.y.stacked = true;
             if (this.type === 'bar') control.options.scales.x.stacked = true;
         }
+        if (this.options.horizontal) {
+            control.options.indexAxis = 'y';
+        }
 
         let script = `
             <script lang="JavaScript">
