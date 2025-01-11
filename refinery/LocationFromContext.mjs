@@ -4,7 +4,7 @@
  * can provide interesting data with no PII.
  */
 import geoIp from 'geoip-lite';
-import cities from 'cities.json' assert { type: "json" };
+import cities from 'cities.json' with {type: "json"};
 export default class LocationFromIp {
   constructor(connector) {
     this.connector = connector;
