@@ -24,6 +24,7 @@
     "axios": "^1.7.7",
     "bcrypt": "^5.0.1",
     "chart.js": "^3.8.0",
+    "chartjs-adapter-moment": "^1.0.1",
     "chartjs-plugin-zoom": "^1.2.1",
     "cities.json": "^1.1.19",
     "command-line-args": "^5.2.0",

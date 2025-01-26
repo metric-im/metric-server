@@ -48,9 +48,11 @@ export default class Chart extends Formatter {
         let trayStyle = "position:relative;display:flex;height:100%"
         let containerStyle = "flex:1 0;width:100%;height:100%;align-self:center";
         let head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">`
-        + `<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>`
+        + `<script src="https://cdn.jsdelivr.net/npm/chart.js@^4"></script>`
         + `<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>`
         + `<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>`
+        + `<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>`
+        // + `<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@^1"></script>`
         // + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs"></script>`
         // + `<script src="${process.env.METRIC_ROOT||""}/lib/hammer.min.js"></script>`
         // + `<script src="${process.env.METRIC_ROOT||""}/lib/chartjs-zoom"></script>`
@@ -65,8 +67,8 @@ export default class Chart extends Formatter {
                 maintainAspectRatio:false,
                 responsive:true,
                 plugins: {zoom: {
-                    zoom: {wheel: {enabled: true},pinch: {enabled: true},mode: 'x'}}},
-                    pan: {enabled:true,mode:'x'}
+                    zoom: {wheel: {enabled: true},pinch: {enabled: true},mode: 'xy'}}},
+                    pan: {enabled:true,mode:'xy'}
             }
         }
         if (this.options.quiet) {
@@ -85,9 +87,15 @@ export default class Chart extends Formatter {
         if (this.options.horizontal) {
             control.options.indexAxis = 'y';
         }
+        if (this.options.series) {
+            if (!control.options.scales) control.options.scales = {};
+            if (!control.options.scales.x) control.options.scales.x = {};
+            control.options.scales.x.type = 'time';
+            control.options.scales.x.time = {unit: 'day'};
+        }
 
         let script = `
-            <script lang="JavaScript">
+            <script lang="JavaScript" type="module">
             let canvas = document.getElementById('canvas');
             let ctx=canvas.getContext('2d');
             let data = ${JSON.stringify(control)};
