@@ -96,6 +96,14 @@ export default class Pull {
                 project[metric.name] = 1;
             }
             statement.push({$group: group});
+            // fill uses $densify and $fill to insert missing data in a time series
+            if (options.fill) {
+                let [field,unit] = options.fill.split(':');
+                let densify = { field: field, range: { step: 1, unit: 'day', bounds : "full" }}
+                let fill = { sortBy: { [field]:1}, output: { rating : { method: "linear"} }}
+                statement.push({$densify: densify});
+                statement.push({$fill: fill});
+            }
             statement.push({$project: project});
             // add/overwrite fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
