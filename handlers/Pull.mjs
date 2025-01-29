@@ -97,6 +97,17 @@ export default class Pull {
             }
             statement.push({$group: group});
             statement.push({$project: project});
+            // fill uses $densify and $fill to insert missing data in a time series
+            if (options.fill) {
+                let [field,unit] = options.fill.split(':');
+                let densify = { field: field, range: { step: 1, unit: unit||'day', bounds : "full" }}
+                let fill = dp.metrics.reduce((r,m)=>{
+                    r.output[m.name] = { method: "locf"}
+                    return r;
+                },{output: {}});
+                statement.push({$densify: densify});
+                // statement.push({$fill: fill});
+            }
             // add/overwrite fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
 
@@ -121,7 +132,7 @@ export default class Pull {
         }
         // postprocess results
         if (!options._inspect) {
-            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
+            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
             if (options.sort) {
                 let sort = Parser.sort(options.sort);
                 results.sort((a,b)=>{
