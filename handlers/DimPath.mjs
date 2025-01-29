@@ -163,7 +163,7 @@ export default class DimPath {
             throw new Error(`Could not parse ${codeAttribute} field ${field.name}, ${e.message}`);
         }
     }
-    organize(data) {
+    organize(data,options) {
         if (this.dimensions.length === 0 || data.length === 0) return data;
         data = data.sort((a, b) => {
             for (let dim of this.dimensions) {
@@ -183,7 +183,9 @@ export default class DimPath {
             for (let metric of metrics) resultRecord[metric] = record[metric];
             organized.push(resultRecord);
         }
-        return this.arrange(this.dimensions, organized);
+        let result = this.arrange(this.dimensions, organized);
+        if (options.fill) result = this.fill(result,options);
+        return result;
     }
     compress(dimensions,data) {
         let dims = dimensions.reduce((r,dim)=>{r[dim.name]=dim;return r},{});
@@ -206,6 +208,21 @@ export default class DimPath {
             }
             return result;
         })
+    }
+
+    /**
+     * Spread metrics through empty/missing values
+     * @param data
+     */
+    fill(data,options) {
+        let lov = {};
+        for (let record of data) {
+            Object.assign(lov,record);
+            for (let attribute in lov) {
+                if (!record[attribute]) record[attribute] = lov[attribute];
+            }
+        }
+        return data;
     }
 
     arrange(dimensions,data) {

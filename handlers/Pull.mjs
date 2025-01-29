@@ -106,7 +106,7 @@ export default class Pull {
                     return r;
                 },{output: {}});
                 statement.push({$densify: densify});
-                statement.push({$fill: fill});
+                // statement.push({$fill: fill});
             }
             // add/overwrite fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
@@ -132,7 +132,7 @@ export default class Pull {
         }
         // postprocess results
         if (!options._inspect) {
-            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results);
+            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
             if (options.sort) {
                 let sort = Parser.sort(options.sort);
                 results.sort((a,b)=>{
