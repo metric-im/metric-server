@@ -29,9 +29,13 @@ export default class Pull {
     }
     parsePath(path) {
         const parts = path.split('/');
+
+        //TODO: The separator is supposed to be comma, not period. This provides backward compatibility
+        if (parts[1]) parts[1].replace('.',',');
+
         return {
             format:parts[0],
-            namespaces:parts[1]?parts[1].split('.'):[],
+            namespaces:parts[1]?parts[1].split(','):[],
             dimensions:parts[2],
             metrics:parts[3]
         }
