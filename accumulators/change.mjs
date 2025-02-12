@@ -5,7 +5,7 @@ export default class Change {
     static descrtiption = 'provides the change be the current value and the last value'
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:this.name}};
+        return {[this.name]:{$avg:'$'+this.name}};
     }
     $setWindowFields(params) {
         return [

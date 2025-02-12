@@ -9,7 +9,6 @@ import Analysis from './handlers/Analysis.mjs';
 import Accumulator from "./handlers/Accumulator.mjs";
 // import Stash from './handlers/Stash.mjs';
 import fs from "fs";
-import path from "path";
 import Componentry from "@metric-im/componentry";
 
 export default class MetricServer extends Componentry.Module {
@@ -66,12 +65,6 @@ export default class MetricServer extends Componentry.Module {
     }
     static async mint(connector) {
         let instance = new MetricServer(connector);
-        let refiners = fs.readdirSync(path.resolve(instance.rootPath+"/refinery"));
-        for (let file of refiners) {
-            let Refiner = await import('./refinery/'+file);
-            let name = file.replace(/(\.mjs|\.js)/,"");
-            instance.refinery[name] = new Refiner.default(connector);
-        }
         instance.Accumulator = await Accumulator.mint(instance.rootPath);
         NameSpace.Accumulator = instance.Accumulator;
         NameSpace.refinery = instance.refinery;
@@ -92,6 +85,28 @@ export default class MetricServer extends Componentry.Module {
         };
 
         return instance;
+    }
+
+    /**
+     * Populate the refinery from all modules that inlude a refinery folder
+     * PostMint is invoked by componentry after all modules are loaded
+     * @returns {Promise<void>}
+     */
+    async postMint() {
+        for (let key in this.connector.componentry.modules) {
+            let module = this.connector.componentry.modules[key];
+            try {
+                let modulePath = module.rootPath+"/refinery";
+                let refiners = fs.readdirSync(modulePath)
+                for (let file of refiners) {
+                    let match = file.match(/([A-Za-z0-9_-]+)\..*$/);
+                    let name = match?match[1]:null;
+                    if (!name) continue;
+                    let Refiner = await import(`${modulePath}/${file}`);
+                    this.refinery[name] = new Refiner.default(this.connector);
+                }
+            } catch(e) {} // if module has no /refinery folder, continue
+        }
     }
     static async getApi(db,options) {
         const componentry = typeof(db)==='string'

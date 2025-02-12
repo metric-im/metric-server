@@ -1,10 +1,10 @@
 export default class Ratio {
-    constructor() {
+    constructor(name) {
         this.name = name;
     }
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:this.name}};
+        return {[this.name]:{$avg:'$'+this.name}};
     }
     $setWindowFields(params) {
         return [
