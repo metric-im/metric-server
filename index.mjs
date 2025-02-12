@@ -66,8 +66,6 @@ export default class MetricServer extends Componentry.Module {
     static async mint(connector) {
         let instance = new MetricServer(connector);
         instance.Accumulator = await Accumulator.mint(instance.rootPath);
-        NameSpace.Accumulator = instance.Accumulator;
-        NameSpace.refinery = instance.refinery;
         instance.handlers = {
             ping:new Ping(instance.connector,this.collectionName),
             pull:new Pull(instance.connector,this.collectionName),
@@ -107,6 +105,8 @@ export default class MetricServer extends Componentry.Module {
                 }
             } catch(e) {} // if module has no /refinery folder, continue
         }
+        NameSpace.refinery = this.refinery;
+        NameSpace.Accumulator = this.Accumulator;
     }
     static async getApi(db,options) {
         const componentry = typeof(db)==='string'
