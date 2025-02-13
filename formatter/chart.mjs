@@ -38,6 +38,7 @@ export default class Chart extends Formatter {
                 if (data.length > 25 || this.options.quiet)  dataset.pointRadius = 0;
                 if (this.options.fill) dataset.fill = true;
             }
+            if (this.options.spanGaps) dataset.spanGaps = true;
             color.next();
             return dataset;
         },[]);
