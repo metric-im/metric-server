@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 /**
  * NameSpace defines a collection of event fields for a domain
  * @type {Data}
@@ -108,7 +111,15 @@ export default class NameSpace {
         }
         return map;
     }
-    // populated when the server is minted
+    static async loadRefinery() {
+        let refiners = fs.readdirSync(path.resolve(instance.rootPath+"/refinery"));
+        for (let file of refiners) {
+            let Refiner = await import('./refinery/'+file);
+            let name = file.replace(/(\.mjs|\.js)/,"");
+            instance.refinery[name] = new Refiner.default(connector);
+        }
+        return this._refinery;
+    }
     static refinery = {};
     static Accumulator = {};
 }
