@@ -5,7 +5,7 @@ export default class ExpMovingAverage {
     static description = `Moving average for the input metric. Look back ten records or provided number, i.e. :expMovingAverage.15`
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:this.name}};
+        return {[this.name]:{$avg:'$'+this.name}};
     }
     $setWindowFields(records) {
         records = records?parseInt(records):10;

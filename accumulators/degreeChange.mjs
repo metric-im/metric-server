@@ -4,7 +4,7 @@ export default class degreeChange {
     }
     static scope = 'root';
     $accumulator(params) {
-        return {[this.name]:{$avg:this.name}};
+        return {[this.name]:{$avg:'$'+this.name}};
     }
     $setWindowFields(params) {
         return [
