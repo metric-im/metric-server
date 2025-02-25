@@ -51,6 +51,8 @@ export default class NameSpace {
             }
             if (result?.refinery) {
                 let available = {};
+                // Remove refiners that are referenced but not available
+                result.refinery = result.refinery.filter(a=>NameSpace.refinery[a]);
                 result.refinery.sort((a,b)=>{
                     a = NameSpace.refinery[a];
                     for (let field of a.provides) available[field._id] = true;
