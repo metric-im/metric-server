@@ -93,20 +93,23 @@ export default class MetricServer extends Componentry.Module {
     async postMint() {
         for (let key in this.connector.componentry.modules) {
             let module = this.connector.componentry.modules[key];
-            try {
-                let modulePath = module.rootPath+"/refinery";
-                let refiners = fs.readdirSync(modulePath)
-                for (let file of refiners) {
-                    let match = file.match(/([A-Za-z0-9_-]+)\..*$/);
-                    let name = match?match[1]:null;
-                    if (!name) continue;
-                    let Refiner = await import(`${modulePath}/${file}`);
-                    this.refinery[name] = new Refiner.default(this.connector);
-                }
-            } catch(e) {} // if module has no /refinery folder, continue
+            await this.loadRefinery(module)
         }
         NameSpace.refinery = this.refinery;
         NameSpace.Accumulator = this.Accumulator;
+    }
+    async loadRefinery(module) {
+        try {
+            let modulePath = module.rootPath+"/refinery";
+            let refiners = fs.readdirSync(modulePath)
+            for (let file of refiners) {
+                let match = file.match(/([A-Za-z0-9_-]+)\..*$/);
+                let name = match?match[1]:null;
+                if (!name) continue;
+                let Refiner = await import(`${modulePath}/${file}`);
+                this.refinery[name] = new Refiner.default(this.connector);
+            }
+        } catch(e) {} // if module has no /refinery folder, continue
     }
     static async getApi(db,options) {
         const componentry = typeof(db)==='string'
@@ -115,6 +118,9 @@ export default class MetricServer extends Componentry.Module {
         componentry.idForge = Componentry.IdForge;
         const connector = await ConnectorStub.mint(componentry);
         let instance = await MetricServer.mint(connector);
+        await instance.loadRefinery(instance);
+        NameSpace.refinery = instance.refinery;
+        NameSpace.Accumulator = instance.Accumulator;
         return instance.connector.api;
     }
     routes() {
