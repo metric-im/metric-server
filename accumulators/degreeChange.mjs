@@ -2,6 +2,7 @@ export default class degreeChange {
     constructor(name) {
         this.name = name;
     }
+    static description = 'Provides the change between the current value and the last value, expressed in degrees'
     static scope = 'root';
     $accumulator(params) {
         return {[this.name]:{$avg:'$'+this.name}};

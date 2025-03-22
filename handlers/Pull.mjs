@@ -55,6 +55,7 @@ export default class Pull {
         if (typeof path === 'string') path = this.parsePath(path);
         if (typeof account === 'string') account = {id:account};
         let dp = await DimPath.mint(this.connector,account,path);
+        let _inspect = options._inspect?.match(/^(true|1)$/i)
 
         // Check for stashed results
         let results = null;
@@ -101,18 +102,7 @@ export default class Pull {
             }
             statement.push({$group: group});
             statement.push({$project: project});
-            // fill uses $densify and $fill to insert missing data in a time series
-            if (options.fill) {
-                let [field,unit] = options.fill.split(':');
-                let densify = { field: field, range: { step: 1, unit: unit||'day', bounds : "full" }}
-                let fill = dp.metrics.reduce((r,m)=>{
-                    r.output[m.name] = { method: "locf"}
-                    return r;
-                },{output: {}});
-                statement.push({$densify: densify});
-                // statement.push({$fill: fill});
-            }
-            // add/overwrite fields with projection code
+            // add/overwrite/format fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
 
             for (let metric of dp.metrics) {
@@ -129,30 +119,28 @@ export default class Pull {
             // limit can be misleading because of the rearrangement of results.
             if (options.limit) statement.push({$limit: parseInt(options.limit)});
             // Expose the query string to be executed for experimentation and debugging
-            if (!!options._inspect) return (res?res.json(statement):statement);
+            if (_inspect) return (res?res.json(statement):statement);
             // Execute the query
             results = await this.collection.aggregate(statement).toArray();
             if (options._stash) this.stash.put(req.account,req.url,results,options._stash);
         }
         // postprocess results
-        if (!options._inspect) {
-            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
-            if (options.sort) {
-                let sort = Parser.sort(options.sort);
-                results.sort((a,b)=>{
-                    for (let [key,val] of Object.entries(sort)) {
-                        if (a[key] === b[key]) continue;
-                        else if (a[key === null]) return val;
-                        else if (b[key === null]) return -val;
-                        else if (a[key] > b[key]) return val;
-                        else return -val;
-                    }
-                    return 0;
-                })
-            }
-            if (options.last) results = results.slice(-parseInt(options.last));
-            if (options.first) results = results.slice(0,parseInt(options.first));
+        if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
+        if (options.sort) {
+            let sort = Parser.sort(options.sort);
+            results.sort((a,b)=>{
+                for (let [key,val] of Object.entries(sort)) {
+                    if (a[key] === b[key]) continue;
+                    else if (a[key === null]) return val;
+                    else if (b[key === null]) return -val;
+                    else if (a[key] > b[key]) return val;
+                    else return -val;
+                }
+                return 0;
+            })
         }
+        if (options.last) results = results.slice(-parseInt(options.last));
+        if (options.first) results = results.slice(0,parseInt(options.first));
         if (res) {
             // Run the selected formatter with the additional strings delimited by dots provided as options
             const format = path.format.split('.');
@@ -167,13 +155,6 @@ export default class Pull {
         }
         return results;
     }
-
-    /**
-     * Render the json results using one the provider rendering formatters.
-     * @param the response object should implement status(), send(), json() and sendFile(), like expressjs     * @param results
-     * @param format is an array or string separated by '.'. The first element is the format engine, the following are options interpreted by the engine
-     * @returns {Promise<void>}
-     */
 }
 class Stash {
     constructor() {

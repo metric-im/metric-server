@@ -1,5 +1,6 @@
 import Parser from './Parser.mjs';
 import Ontology from './Ontology.mjs';
+import moment from 'moment';
 
 export default class DimPath {
     constructor(connector) {
@@ -7,6 +8,7 @@ export default class DimPath {
         this.ontology = new Ontology(connector);
         this.dimensions = [];
         this.metrics = [];
+        this.foreignCollections = []; // $lookup only works with collections in this set
         this._ASSIGN = "assign";
         this._OBJECTIFY = "objectify";
         this._COMPRESS = "compress";
@@ -15,22 +17,18 @@ export default class DimPath {
         this._SKIP = "skip";
     }
     static async mint(connector,account,path) {
-        try {
-            let instance = new DimPath(connector);
-            instance.accumulators = {};
-            instance.fieldMap = {};
-            for (let ns of path.namespaces) {
-                ns = await instance.ontology.nameSpace.get(account,ns,1);
-                if (!ns) throw(new Error("Namespace unknown"));
-                Object.assign(instance.accumulators,await instance.ontology.nameSpace.accumulators(account,ns));
-                // parse fieldMap from the namespaces requested (usually just one)
-                Object.assign(instance.fieldMap,await instance.ontology.nameSpace.fields(account,ns));
-            }
-            instance.parse(path.dimensions,path.metrics);
-            return instance;
-        } catch(e) {
-            throw(400);
+        let instance = new DimPath(connector);
+        instance.accumulators = {};
+        instance.fieldMap = {};
+        for (let ns of path.namespaces) {
+            ns = await instance.ontology.nameSpace.get(account,ns,1);
+            if (!ns) throw(new Error("Namespace unknown"));
+            Object.assign(instance.accumulators,await instance.ontology.nameSpace.accumulators(account,ns));
+            // parse fieldMap from the namespaces requested (usually just one)
+            Object.assign(instance.fieldMap,await instance.ontology.nameSpace.fields(account,ns));
         }
+        instance.parse(path.dimensions,path.metrics);
+        return instance;
     }
     get hasCompressors() {
         return this.dimensions.some(d=>d.compressor);
@@ -39,36 +37,37 @@ export default class DimPath {
         // parse metrics
         this.metrics = this.smartSplit(metrics).map(k => {
             let match = k.match(/^([A-Za-z0-9-_.]+)[:]?(.*)/);
-            let nameArgs = match[1].split('.').map(a=>(this.fieldMap[a]?this.fieldMap[a]:a));
-            let name = nameArgs.shift();
-            let methodArgs = match[2]?match[2].split('.'):[];
-            let method = methodArgs.length>0?methodArgs.shift():(name.accumulator || 'sum');
-            return {name: name._id||name, nameArgs:nameArgs, method: method, methodArgs:methodArgs, field:(typeof name==='object')?name:null}
+            let field = this.fieldMap[match[1]] || {_id:match[1]};
+            field.accumulator = match[2] || field.accumulator || 'sum';
+            field.methodArgs = field.accumulator.split('.');
+            field.name = field.methodArgs.shift()
+            return {name: field._id, method: field.accumulator, methodArgs:field.methodArgs, field:this.fieldMap[field._id]}
         });
         // parse dimensions
         this.dimensions = this.smartSplit(dimensions).map(k=>{
-            let match = k.match(/^([@+><!])?([A-Za-z0-9-_.]+)[:]?(.*)/);
+            let match = k.match(/^([@+><!])?([A-Za-z0-9-_.]+)([~:]?)(.*)/);
             let compressor = null;
             if (match[1]==='@') compressor=this._ASSIGN;
             else if (match[1]==='+') compressor=this._COMBINE;
             else if (match[1]==='<') compressor=this._COMPRESS;
             else if (match[1]==='>') compressor=this._SPREAD;
             else if (match[1]==='!') compressor=this._SKIP;
-            let nameArgs = match[2].split('.').map(a=>(this.fieldMap[a]?this.fieldMap[a]:a));;
-            let name = nameArgs.shift();
-            return {name:name._id||name,nameArgs:nameArgs,value:match[3],compressor:compressor,field:(typeof name==='object')?name:null,filters:[]};
+            let modifier = match[3]?(match[3]==='~'?'series':'match'):null;
+            return {name:match[2],modifier,value:match[4],compressor:compressor,field:this.fieldMap[match[2]],filters:[]};
         });
-        // construct dimension filters
+        // Apply dimension modifiers
         for (let key of this.dimensions) {
-            if (key.value) {
-                let matchRange = key.value.match(/^([A-Za-b0-9-_]*)~(.*)$/);
-                if (matchRange) {
-                    let stage = {$match:{}}
-                    if (matchRange[1]) stage.$match[key.name] = {$gte:this.parseValue(key.name,matchRange[1])};
-                    if (matchRange[2]) stage.$match[key.name] = {$lte:this.parseValue(key.name,matchRange[2])};
-                    key.filters.push(stage);
-                    continue;
-                }
+            if (!key.value) continue;
+            if (key.modifier==='match') {
+                // Problematic and rarely used. Apply where clauses instead
+                // let matchRange = key.value.match(/^([A-Za-b0-9-_]*)~(.*)$/);
+                // if (matchRange) {
+                //     let stage = {$match:{}}
+                //     if (matchRange[1]) stage.$match[key.name] = {$gte:this.parseValue(key.name,matchRange[1])};
+                //     if (matchRange[2]) stage.$match[key.name] = {$lte:this.parseValue(key.name,matchRange[2])};
+                //     key.filters.push(stage);
+                //     continue;
+                // }
                 let matchMongo = key.value.match(/^(\{.+\})$/);
                 if (matchMongo) {
                     let obj = Parser.objectify(matchMongo[1]);
@@ -81,22 +80,74 @@ export default class DimPath {
                     key.filters.push({$match:{[key.name]:obj}});
                     continue;
                 }
-                //TODO: Finish and add data security controls
-                // let matchLookup = key.value.match(/^\((.+)\)$/);
-                // if (matchLookup) {
-                //     let params = matchLookup[1].split(',');
-                //     let collection = params.shift();
-                //     if (params.length===0) params.unshift('name'); // default field to project
-                //     params = params.reduce((r,o)=>{r[key.name+'.'+o]=1;return r},{})
-                //     key.filters.push({$lookup:{from:collection,localField:key.name,foreignField:'_id',as:key.name}});
-                //     key.filters.push({$project:params});
-                //     key.filters.push({$unwind:'$'+key.name});
-                //     continue;
-                // }
+                let matchLookup = key.value.match(/^\((.+)\)$/);
+                if (matchLookup) {
+                    let params = matchLookup[1].split(',');
+                    let collection = params.shift();
+                    if (!this.foreignCollections.includes(collection)) continue;
+                    if (params.length===0) params.unshift('name'); // default field to project
+                    params = params.reduce((r,o)=>{r[key.name+'.'+o]=1;return r},{})
+                    key.filters.push({$lookup:{from:collection,localField:key.name,foreignField:'_id',as:key.name}});
+                    key.filters.push({$project:params});
+                    key.filters.push({$unwind:'$'+key.name});
+                    continue;
+                }
                 key.filters.push({$match:{[key.name]:this.parseValue(key.name,key.value)}});
+            } else if (key.modifier==='series') {
+                if (key.field?.dataType === 'date') {
+                    let valueArgs = key.value.split('.');
+                    let [original,step,unit] = valueArgs.shift().match(/(\d*)(.*)/);
+                    key.filters.push({$set:{[key.name]:{$dateTrunc:{date:`$`+key.name,unit:unit}}}});
+                    let fillArg = (valueArgs.shift()||"").match(/(linear|locf|)fill/i);
+                    if (fillArg) {
+                        let method = fillArg[1] || 'locf';
+                        let densify = { field: key.name, range: { step: step?Number(step):1, unit: unit, bounds : "full"}}
+                        key.filters.push({$densify: densify});
+                        let fill = {output:{},sortBy:{[key.name]:1}}
+                        for (let fillkey of this.dimensions) if (fillkey.name !== key.name) fill.output[fillkey.name]={method:'locf'};
+                        for (let fillkey of this.metrics) fill.output[fillkey.name]={method:method};
+                        key.filters.push({$fill: fill});
+                    }
+                    // Dates used in series are very likely to anchor graphs and tables, so enable casting to readable strings
+                    if (!key.field?.project || key.field?.project === '') {
+                        key.project = (value)=>{
+                            let formatting = {
+                                year:'YYYY',
+                                quarter:'YY[Q]Q',
+                                week:'YY[W]W',
+                                month:'YYYY-MM',
+                                day:'YYYY-MM-DD',
+                                hour:'MM-DD HH:00',
+                                minute:'MM-DD HH:mm',
+                                second:'HH:mm:ss',
+                                millisecond:'HH:mm:ss.SSS',
+                            }
+                            return moment(value).format(formatting[unit]);
+                        }
+                    }
+                } else if (['integer','float','currency'].includes(key.field?.dataType)) {
+                    let valueArgs = key.value.split('.');
+                    let step = Number(valueArgs.shift());
+                    let fill = (valueArgs.shift()||"").match(/fill/i);
+                    key.filters.push({$set:{[key.name]:{$multiply:[{$round:{$divide:['$'+key.name,step]}},step]}}});
+                    if (fill) {
+                        let densify = { field: key.name, range: { step: step, bounds : "full"}}
+                        key.filters.push({$densify: densify});
+                        let fill = {output:{},sortBy:{[key.name]:1}}
+                        for (let fillkey of this.dimensions) if (fillkey.name !== key.name) fill.output[fillkey.name]={method:'locf'};
+                        for (let fillkey of this.metrics) fill.output[fillkey.name]={method:'locf'};
+                        key.filters.push({$fill: fill});
+                    }
+                }
             }
         }
         this.filters = this.dimensions.reduce((r,d)=>{return r.concat(d.filters)},[]);
+        this.projections = this.dimensions.concat(this.metrics).reduce((r,key)=>{
+            // cast dates to readable form
+            if (key.dataType === 'date' && !key.field?.project) {
+
+            }
+        },[]);
     }
 
     /**
@@ -152,10 +203,6 @@ export default class DimPath {
                         r.push('$'+a);
                         return r;
                     },[]);
-                    //TODO: This has become a mess. params on dimensions are not working out cleanly.
-                    let availableFields = this.dimensions.concat(this.metrics);
-                    let baseField = availableFields.find(af=>af.name===field._id);
-                    if (baseField) inputs = inputs.concat(baseField.nameArgs);
                     return {$set:{[field._id]:{$function:{body:field[codeAttribute], args:inputs, lang:"js"}}}};
                 }
             }
