@@ -55,6 +55,7 @@ export default class Pull {
         if (typeof path === 'string') path = this.parsePath(path);
         if (typeof account === 'string') account = {id:account};
         let dp = await DimPath.mint(this.connector,account,path);
+        let _inspect = options._inspect?.match(/^(true|1)$/i)
 
         // Check for stashed results
         let results = null;
@@ -74,12 +75,11 @@ export default class Pull {
             statement = statement.concat(dp.expandDerivedFields());
 
             // add any filters built into the dimensions request
-            for (let filter of dp.filters) statement.push(filter);
+            for (let filter of dp.filters) statement.push(filter.statement);
             // group by metrics
             let group = {_id: {}};
             let project = {_id: 0, '_ns': '$_id._ns'};
             for (let dimension of dp.dimensions) {
-                if (dimension.compressor === dp._SKIP) continue;
                 group._id[dimension.name] = `$${dimension.name}`
                 project[dimension.name] = '$_id.' + dimension.name;
             }
@@ -101,19 +101,10 @@ export default class Pull {
             }
             statement.push({$group: group});
             statement.push({$project: project});
-            // fill uses $densify and $fill to insert missing data in a time series
-            if (options.fill) {
-                let [field,unit] = options.fill.split(':');
-                let densify = { field: field, range: { step: 1, unit: unit||'day', bounds : "full" }}
-                let fill = dp.metrics.reduce((r,m)=>{
-                    r.output[m.name] = { method: "locf"}
-                    return r;
-                },{output: {}});
-                statement.push({$densify: densify});
-                // statement.push({$fill: fill});
-            }
-            // add/overwrite fields with projection code
+            // add/overwrite/format fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
+            // run built in projects
+
 
             for (let metric of dp.metrics) {
                 if (dp.accumulators[metric.method]) {
@@ -126,54 +117,49 @@ export default class Pull {
             }
 
             if (options.sort) statement.push({$sort: Parser.sort(options.sort)});
+            else statement.push({$sort: dp.dimensions.reduce((r,d) => {
+                r[d.name]=1;
+                return r;
+            },{})})
             // limit can be misleading because of the rearrangement of results.
             if (options.limit) statement.push({$limit: parseInt(options.limit)});
             // Expose the query string to be executed for experimentation and debugging
-            if (!!options._inspect) return (res?res.json(statement):statement);
+            if (_inspect) return (res?res.json(statement):statement);
             // Execute the query
             results = await this.collection.aggregate(statement).toArray();
             if (options._stash) this.stash.put(req.account,req.url,results,options._stash);
         }
-        // postprocess results
-        if (!options._inspect) {
-            if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
-            if (options.sort) {
-                let sort = Parser.sort(options.sort);
-                results.sort((a,b)=>{
-                    for (let [key,val] of Object.entries(sort)) {
-                        if (a[key] === b[key]) continue;
-                        else if (a[key === null]) return val;
-                        else if (b[key === null]) return -val;
-                        else if (a[key] > b[key]) return val;
-                        else return -val;
-                    }
-                    return 0;
-                })
+        // prepare format
+        let formatArgs = path.format.split('.');
+        let format = formatArgs.shift().toLowerCase();
+        // apply built-in field projections. Skipped for JSON. Machines prefer date objects over pretty strings
+        if (format !== 'json') {
+            let processors = dp.dimensions.concat(dp.metrics).reduce((r,key)=>{
+                if (typeof key.project === 'function') r.push(key);
+                return r;
+            },[]);
+            for (let record of results) {
+                for (let key of processors) {
+                    record[key.name] = key.project(record[key.name])
+                }
             }
-            if (options.last) results = results.slice(-parseInt(options.last));
-            if (options.first) results = results.slice(0,parseInt(options.first));
         }
-        if (res) {
-            // Run the selected formatter with the additional strings delimited by dots provided as options
-            const format = path.format.split('.');
-            let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
-            if (!module) {
-                res.status(400).json({message:'format unavailable'});
-            } else {
-                let formatter = new module.default(dp,format.slice(1));
-                // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
-                await formatter.render(res,results);
-            }
+        // structure results
+        if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
+
+        if (options.last) results = results.slice(-parseInt(options.last));
+        if (options.first) results = results.slice(0,parseInt(options.first));
+        // Run the selected formatter with the additional strings delimited by dots provided as options
+        let module = await import('../formatter/'+format+".mjs");
+        if (!module) {
+            res.status(400).json({message:'format unavailable'});
+        } else {
+            let formatter = new module.default(dp,formatArgs);
+            // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
+            await formatter.render(res,results);
         }
         return results;
     }
-
-    /**
-     * Render the json results using one the provider rendering formatters.
-     * @param the response object should implement status(), send(), json() and sendFile(), like expressjs     * @param results
-     * @param format is an array or string separated by '.'. The first element is the format engine, the following are options interpreted by the engine
-     * @returns {Promise<void>}
-     */
 }
 class Stash {
     constructor() {

@@ -58,6 +58,23 @@ export default class Parser {
             date:time.format('YYYY-MM-DD')
         }
     }
+    static #dateFormat = {
+        year:'YYYY',
+        quarter:'YY[Q]Q',
+        week:'YY[W]W',
+        month:'YYYY-MM',
+        day:'YYYY-MM-DD',
+        hour:'MM-DD HH:00',
+        minute:'MM-DD HH:mm',
+        second:'HH:mm:ss',
+        millisecond:'HH:mm:ss.SSS'
+    }
+    static modifyDateFormat(format) {
+        Object.assign(Parser.#dateFormat,format);
+    }
+    static get dateFormat() {
+        return Parser.#dateFormat;
+    }
 }
 
 

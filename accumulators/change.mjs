@@ -2,7 +2,7 @@ export default class Change {
     constructor(name) {
         this.name = name;
     }
-    static descrtiption = 'provides the change be the current value and the last value'
+    static description = 'Provides the change between the current value and the last value'
     static scope = 'root';
     $accumulator(params) {
         return {[this.name]:{$avg:'$'+this.name}};

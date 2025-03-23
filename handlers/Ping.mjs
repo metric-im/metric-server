@@ -33,15 +33,14 @@ export default class Ping {
 
     routes() {
         let router = express.Router();
-        // router.use((req,res,next)=>{
-        //     if (req.account && req.account.id) next();
-        //     else res.status(401).send();
-        // })
-        router.all("/:format/:ns", async (req, res) => {
+        router.all("/:format/:ns?", async (req, res) => {
             try {
-                let ns = await this.ontology.nameSpace.get(req.account,req.params.ns,2);
+                let {format,ns} = req.params;
+                if (!ns) {ns = format;format = 'silent';}
+                ns = await this.ontology.nameSpace.get(req.account,ns,2);
                 if (!ns) return res.status(401).send();
-                let body = Object.assign({},req.body,req.query);
+                let body = Object.assign({},req.body,req.query,{_ns:ns._id});
+                body._origin = {ip: req.ip, ua: req.get('User-Agent')}
                 let result = await this.execute(body,ns);
                 switch(req.params.format) {
                     case "json":
