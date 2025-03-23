@@ -129,48 +129,34 @@ export default class Pull {
             results = await this.collection.aggregate(statement).toArray();
             if (options._stash) this.stash.put(req.account,req.url,results,options._stash);
         }
-        // postprocess results
+        // prepare format
+        let formatArgs = path.format.split('.');
+        let format = formatArgs.shift().toLowerCase();
+        // apply built-in field projections. Skipped for JSON. Machines prefer date objects over pretty strings
+        if (format !== 'json') {
+            let processors = dp.dimensions.concat(dp.metrics).reduce((r,key)=>{
+                if (typeof key.project === 'function') r.push(key);
+                return r;
+            },[]);
+            for (let record of results) {
+                for (let key of processors) {
+                    record[key.name] = key.project(record[key.name])
+                }
+            }
+        }
+        // structure results
         if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
-
-        // if (options.sort) {
-        //     let sort = Parser.sort(options.sort);
-        //     results.sort((a,b)=>{
-        //         for (let [key,val] of Object.entries(sort)) {
-        //             if (a[key] === b[key]) continue;
-        //             else if (a[key === null]) return val;
-        //             else if (b[key === null]) return -val;
-        //             else if (a[key] > b[key]) return val;
-        //             else return -val;
-        //         }
-        //         return 0;
-        //     })
-        // }
 
         if (options.last) results = results.slice(-parseInt(options.last));
         if (options.first) results = results.slice(0,parseInt(options.first));
-        if (res) {
-            const format = path.format.split('.');
-            // apply built-in field projections. Skipped for JSON. Machines prefer date objects over pretty strings
-            if (format[0].toLowerCase() !== 'json') {
-                let processors = dp.dimensions.concat(dp.metrics).reduce((r,key)=>{
-                    if (typeof key.project === 'function') r.push(key);
-                    return r;
-                },[]);
-                for (let record of results) {
-                    for (let key of processors) {
-                        record[key.name] = key.project(record[key.name])
-                    }
-                }
-            }
-            // Run the selected formatter with the additional strings delimited by dots provided as options
-            let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
-            if (!module) {
-                res.status(400).json({message:'format unavailable'});
-            } else {
-                let formatter = new module.default(dp,format.slice(1));
-                // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
-                await formatter.render(res,results);
-            }
+        // Run the selected formatter with the additional strings delimited by dots provided as options
+        let module = await import('../formatter/'+format+".mjs");
+        if (!module) {
+            res.status(400).json({message:'format unavailable'});
+        } else {
+            let formatter = new module.default(dp,formatArgs);
+            // Res should be an object that supports send(), json(), sendFile() and status(), like expressjs
+            await formatter.render(res,results);
         }
         return results;
     }
