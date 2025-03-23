@@ -2,6 +2,7 @@ import Parser from './Parser.mjs';
 import Ontology from './Ontology.mjs';
 import moment from 'moment';
 
+
 export default class DimPath {
     constructor(connector) {
         this.connector = connector;
@@ -111,18 +112,7 @@ export default class DimPath {
                     // Dates used in series are very likely to anchor graphs and tables, so enable casting to readable strings
                     if (!key.field?.project || key.field?.project === '') {
                         key.project = (value)=>{
-                            let formatting = {
-                                year:'YYYY',
-                                quarter:'YY[Q]Q',
-                                week:'YY[W]W',
-                                month:'YYYY-MM',
-                                day:'YYYY-MM-DD',
-                                hour:'MM-DD HH:00',
-                                minute:'MM-DD HH:mm',
-                                second:'HH:mm:ss',
-                                millisecond:'HH:mm:ss.SSS',
-                            }
-                            return moment(value).format(formatting[unit]);
+                            return moment(value).format(Parser.dateFormat[unit]);
                         }
                     }
                 } else if (['integer','float','currency'].includes(key.field?.dataType)) {
@@ -207,15 +197,6 @@ export default class DimPath {
     }
     organize(data,options) {
         if (this.dimensions.length === 0 || data.length === 0) return data;
-        data = data.sort((a, b) => {
-            for (let dim of this.dimensions) {
-                if (!a[dim.name]) return -1;
-                else if (!b[dim.name]) return 1;
-                else if (a[dim.name] < b[dim.name]) return -1;
-                else if (a[dim.name] > b[dim.name]) return 1;
-            }
-            return 0;
-        });
         let organized = [];
         let metrics = Object.keys(data[0]).filter(key => !this.dimensions.find(dim => dim.name === key));
         for (let record of data) {

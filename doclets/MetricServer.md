@@ -44,3 +44,36 @@ const app = express();
 const componentry = new Componentry(app,await Profile());
 await componentry.init(AccountServer,CommonMixin,DataServer,MetricServer,BridgeServer,WikiMixin,UML,ApplicationModule);
 ```
+## Module Reference
+### method: initalizeEvent(account,req)
+| argument | type | description                               |
+|----------| --- |-------------------------------------------|
+| account  | Object | Componentry account object from connector |
+| req | expressjs request object |
+
+Return an event body structure initialized with attributes culled from the account and expressjs request objects.
+Both arguments are required.
+
+### method: modifyDateFormat(format)
+| argument | type | description |
+| --- | --- | --- |
+| format | Object | provided format will be assigned to default date formatting, overwriting existing format string(s) |
+
+Use https://momentjs.com/docs/#/displaying/ format to specify the string representation of dates. The default is:
+```javascript
+{
+    year:'YYYY',
+    quarter:'YY[Q]Q',
+    week:'YY[W]W',
+    month:'YYYY-MM',
+    day:'YYYY-MM-DD',
+    hour:'MM-DD HH:00',
+    minute:'MM-DD HH:mm',
+    second:'HH:mm:ss',
+    millisecond:'HH:mm:ss.SSS'
+}
+```
+For example, `MetricServerr.modifyDateFormat({hour:'MMM [']YY'})` will change rendering for series by hour to display short month name and two digit year, "Apr '25".
+
+### attribute: dateFormat
+return current date formatting strings

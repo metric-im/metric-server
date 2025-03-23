@@ -10,6 +10,7 @@ import Accumulator from "./handlers/Accumulator.mjs";
 // import Stash from './handlers/Stash.mjs';
 import fs from "fs";
 import Componentry from "@metric-im/componentry";
+import Parser from "./handlers/Parser.mjs";
 
 export default class MetricServer extends Componentry.Module {
     constructor(connector) {
@@ -19,6 +20,8 @@ export default class MetricServer extends Componentry.Module {
         this.accumulators = {};
         this.collectionName = 'event';
     }
+    static modifyDateFormat(dateFormat) { Parser.modifyDateFormat(dateFormat)}
+    static get dateFormat() { return Parser.dateFormat}
     /**
      * Set collection is used to rename the default media collection
      * @param name alternate name to 'media'
