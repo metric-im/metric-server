@@ -75,12 +75,11 @@ export default class Pull {
             statement = statement.concat(dp.expandDerivedFields());
 
             // add any filters built into the dimensions request
-            for (let filter of dp.filters) statement.push(filter);
+            for (let filter of dp.filters) statement.push(filter.statement);
             // group by metrics
             let group = {_id: {}};
             let project = {_id: 0, '_ns': '$_id._ns'};
             for (let dimension of dp.dimensions) {
-                if (dimension.compressor === dp._SKIP) continue;
                 group._id[dimension.name] = `$${dimension.name}`
                 project[dimension.name] = '$_id.' + dimension.name;
             }
@@ -104,6 +103,8 @@ export default class Pull {
             statement.push({$project: project});
             // add/overwrite/format fields with projection code
             statement = statement.concat(dp.expandProjectedFields());
+            // run built in projects
+
 
             for (let metric of dp.metrics) {
                 if (dp.accumulators[metric.method]) {
@@ -116,6 +117,10 @@ export default class Pull {
             }
 
             if (options.sort) statement.push({$sort: Parser.sort(options.sort)});
+            else statement.push({$sort: dp.dimensions.reduce((r,d) => {
+                r[d.name]=1;
+                return r;
+            },{})})
             // limit can be misleading because of the rearrangement of results.
             if (options.limit) statement.push({$limit: parseInt(options.limit)});
             // Expose the query string to be executed for experimentation and debugging
@@ -126,24 +131,38 @@ export default class Pull {
         }
         // postprocess results
         if (dp.metrics.length > 0 && results.length > 0) results = dp.organize(results,options);
-        if (options.sort) {
-            let sort = Parser.sort(options.sort);
-            results.sort((a,b)=>{
-                for (let [key,val] of Object.entries(sort)) {
-                    if (a[key] === b[key]) continue;
-                    else if (a[key === null]) return val;
-                    else if (b[key === null]) return -val;
-                    else if (a[key] > b[key]) return val;
-                    else return -val;
-                }
-                return 0;
-            })
-        }
+
+        // if (options.sort) {
+        //     let sort = Parser.sort(options.sort);
+        //     results.sort((a,b)=>{
+        //         for (let [key,val] of Object.entries(sort)) {
+        //             if (a[key] === b[key]) continue;
+        //             else if (a[key === null]) return val;
+        //             else if (b[key === null]) return -val;
+        //             else if (a[key] > b[key]) return val;
+        //             else return -val;
+        //         }
+        //         return 0;
+        //     })
+        // }
+
         if (options.last) results = results.slice(-parseInt(options.last));
         if (options.first) results = results.slice(0,parseInt(options.first));
         if (res) {
-            // Run the selected formatter with the additional strings delimited by dots provided as options
             const format = path.format.split('.');
+            // apply built-in field projections. Skipped for JSON. Machines prefer date objects over pretty strings
+            if (format[0].toLowerCase() !== 'json') {
+                let processors = dp.dimensions.concat(dp.metrics).reduce((r,key)=>{
+                    if (typeof key.project === 'function') r.push(key);
+                    return r;
+                },[]);
+                for (let record of results) {
+                    for (let key of processors) {
+                        record[key.name] = key.project(record[key.name])
+                    }
+                }
+            }
+            // Run the selected formatter with the additional strings delimited by dots provided as options
             let module = await import('../formatter/'+format[0].toLowerCase()+".mjs");
             if (!module) {
                 res.status(400).json({message:'format unavailable'});

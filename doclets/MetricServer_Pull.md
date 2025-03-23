@@ -136,8 +136,6 @@ Examples:
 * `_time~5minute.locfFill` same as above. Inserted values are set to "last observed value" of each dimension or metric
 * `_time~5minute.linearFill` insert metric values on a linear interpolation scale between last and next 
 
->NOTE: linear fill throws an error. It is unclear why.
-
 ## Organizer
 
 ### Silent Dimensions

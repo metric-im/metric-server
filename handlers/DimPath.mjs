@@ -71,13 +71,13 @@ export default class DimPath {
                 let matchMongo = key.value.match(/^(\{.+\})$/);
                 if (matchMongo) {
                     let obj = Parser.objectify(matchMongo[1]);
-                    key.filters.push({$match:{[key.name]:obj}});
+                    key.filters.push({priority:1,statement:{$match:{[key.name]:obj}}});
                     continue;
                 }
                 let matchSet = key.value.match(/^(\[.+\])$/);
                 if (matchSet) {
                     let obj = Parser.objectify(`{$in:${matchSet[1]}}`);
-                    key.filters.push({$match:{[key.name]:obj}});
+                    key.filters.push({priority:1,statement:{$match:{[key.name]:obj}}});
                     continue;
                 }
                 let matchLookup = key.value.match(/^\((.+)\)$/);
@@ -87,26 +87,26 @@ export default class DimPath {
                     if (!this.foreignCollections.includes(collection)) continue;
                     if (params.length===0) params.unshift('name'); // default field to project
                     params = params.reduce((r,o)=>{r[key.name+'.'+o]=1;return r},{})
-                    key.filters.push({$lookup:{from:collection,localField:key.name,foreignField:'_id',as:key.name}});
-                    key.filters.push({$project:params});
-                    key.filters.push({$unwind:'$'+key.name});
+                    key.filters.push({priority:2,statement:{$lookup:{from:collection,localField:key.name,foreignField:'_id',as:key.name}}});
+                    key.filters.push({priority:2,statement:{$project:params}});
+                    key.filters.push({priority:2,statement:{$unwind:'$'+key.name}});
                     continue;
                 }
-                key.filters.push({$match:{[key.name]:this.parseValue(key.name,key.value)}});
+                key.filters.push({priority:1,statement:{$match:{[key.name]:this.parseValue(key.name,key.value)}}});
             } else if (key.modifier==='series') {
                 if (key.field?.dataType === 'date') {
                     let valueArgs = key.value.split('.');
                     let [original,step,unit] = valueArgs.shift().match(/(\d*)(.*)/);
-                    key.filters.push({$set:{[key.name]:{$dateTrunc:{date:`$`+key.name,unit:unit}}}});
+                    key.filters.push({priority:3,statement:{$set:{[key.name]:{$dateTrunc:{date:`$`+key.name,unit:unit}}}}});
                     let fillArg = (valueArgs.shift()||"").match(/(linear|locf|)fill/i);
                     if (fillArg) {
                         let method = fillArg[1] || 'locf';
                         let densify = { field: key.name, range: { step: step?Number(step):1, unit: unit, bounds : "full"}}
-                        key.filters.push({$densify: densify});
+                        key.filters.push({priority:5,statement:{$densify: densify}});
                         let fill = {output:{},sortBy:{[key.name]:1}}
                         for (let fillkey of this.dimensions) if (fillkey.name !== key.name) fill.output[fillkey.name]={method:'locf'};
                         for (let fillkey of this.metrics) fill.output[fillkey.name]={method:method};
-                        key.filters.push({$fill: fill});
+                        key.filters.push({priority:6,statement:{$fill: fill}});
                     }
                     // Dates used in series are very likely to anchor graphs and tables, so enable casting to readable strings
                     if (!key.field?.project || key.field?.project === '') {
@@ -129,25 +129,20 @@ export default class DimPath {
                     let valueArgs = key.value.split('.');
                     let step = Number(valueArgs.shift());
                     let fill = (valueArgs.shift()||"").match(/fill/i);
-                    key.filters.push({$set:{[key.name]:{$multiply:[{$round:{$divide:['$'+key.name,step]}},step]}}});
+                    key.filters.push({priority:3,statement:{$set:{[key.name]:{$multiply:[{$round:{$divide:['$'+key.name,step]}},step]}}}});
                     if (fill) {
                         let densify = { field: key.name, range: { step: step, bounds : "full"}}
-                        key.filters.push({$densify: densify});
+                        key.filters.push({priority:5,statement:{$densify: densify}});
                         let fill = {output:{},sortBy:{[key.name]:1}}
                         for (let fillkey of this.dimensions) if (fillkey.name !== key.name) fill.output[fillkey.name]={method:'locf'};
                         for (let fillkey of this.metrics) fill.output[fillkey.name]={method:'locf'};
-                        key.filters.push({$fill: fill});
+                        key.filters.push({priority:6,statement:{$fill: fill}});
                     }
                 }
             }
         }
         this.filters = this.dimensions.reduce((r,d)=>{return r.concat(d.filters)},[]);
-        this.projections = this.dimensions.concat(this.metrics).reduce((r,key)=>{
-            // cast dates to readable form
-            if (key.dataType === 'date' && !key.field?.project) {
-
-            }
-        },[]);
+        this.filters.sort((a,b)=>{return a.priority - b.priority});
     }
 
     /**
