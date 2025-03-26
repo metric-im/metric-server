@@ -40,7 +40,7 @@ export default class Ping {
                 ns = await this.ontology.nameSpace.get(req.account,ns,2);
                 if (!ns) return res.status(401).send();
                 let body = Object.assign({},req.body,req.query,{_ns:ns._id});
-                body._origin = {ip: req.ip, ua: req.get('User-Agent')}
+                body._origin = {ip: (req.ip === '::ffff:127.0.0.1')?req.headers['x-forwarded-for']||'':req.ip||'', ua: req.get('User-Agent')}
                 let result = await this.execute(body,ns);
                 switch(req.params.format) {
                     case "json":
