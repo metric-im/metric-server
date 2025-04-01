@@ -19,14 +19,14 @@ and reports the average speed across these dimensions along with the count.
 
 The schema can be totally arbitrary or defined in depth through the namespace ontology for "roadtrip".
 
-* **[Ping](MetricServer_ping)**: Record events
+* **MetricServer_Ping**: Record events
 
-* **[Pull](MetricServer_pull)**: Query events
+* **MetricServer_Pull**: Query events
 
-* **[Ontology](MetricServer_ontology)**: Defining schemas, if needed, including datatypes, derived fields,
+* **MetricServer_Ontology**: Defining schemas, if needed, including datatypes, derived fields,
 rendering formats, external data, etc.
 
-Metric Server is designed to plugin into the lightweight [metric componentry](MetricMessenger)
+Metric Server is designed to plugin into the lightweight MetricComponentry.
 
 ## Basic Usage
 
