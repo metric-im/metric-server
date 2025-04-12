@@ -40,7 +40,10 @@ export default class Ping {
                 ns = await this.ontology.nameSpace.get(req.account,ns,2);
                 if (!ns) return res.status(401).send();
                 let body = Object.assign({},req.body,req.query,{_ns:ns._id});
-                body._origin = {ip: (req.ip === '::ffff:127.0.0.1')?req.headers['x-forwarded-for']||'':req.ip||'', ua: req.get('User-Agent')}
+                if (!body._origin) body._origin = {
+                    ip: req.headers['x-forwarded-for']?req.headers['x-forwarded-for'].split(',')[0]:req.ip,
+                    ua: req.get('User-Agent')
+                };
                 let result = await this.execute(body,ns);
                 switch(req.params.format) {
                     case "json":
@@ -91,13 +94,12 @@ export default class Ping {
      * a structure that presents the contextual data about the session
      * as known to the calling app. _origin can set the IP, the User Agent
      * and other attributes.
-     * @param context
-     * @param body
-     * @param req
+     * @param body event attributes
+     * @param ns namespace of event
      * @returns {Promise<{}>}
      */
     async embellishBody(body,ns) {
-        let context = {};
+        let context = {connector:this.connector};
         if (body._origin) {
             // query string _origin needs to be parsed. This is mostly a DEBUG feature
             if (typeof body._origin === 'string') body._origin = JSON.parse(body._origin);
